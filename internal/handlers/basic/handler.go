@@ -2,7 +2,7 @@ package handlerBasic
 
 import (
 	"fmt"
-	"github.com/driscollco-cluster/go-service-rest/internal/conf"
+	"github.com/driscollco-cluster/operator-1password/internal/conf"
 	"github.com/driscollco-core/http-router"
 )
 

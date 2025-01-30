@@ -1,7 +1,7 @@
 package handlerBasic
 
 import (
-	"github.com/driscollco-cluster/go-service-rest/internal/mocks"
+	"github.com/driscollco-cluster/operator-1password/internal/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"

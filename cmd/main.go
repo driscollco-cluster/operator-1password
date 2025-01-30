@@ -1,37 +1,31 @@
 package main
 
 import (
-	"github.com/driscollco-cluster/go-service-rest/internal/conf"
-	"github.com/driscollco-cluster/go-service-rest/internal/handlers/basic"
-	router "github.com/driscollco-core/http-router"
-	processGroupInterfaces "github.com/driscollco-core/process-group/interfaces"
+	"github.com/driscollco-cluster/operator-1password/internal/conf"
+	"github.com/driscollco-cluster/operator-1password/internal/crds"
+	"github.com/driscollco-cluster/operator-1password/internal/operator"
+	operatorLib "github.com/driscollco-core/kubernetes-operator"
+	logLib "github.com/driscollco-core/log"
 	"github.com/driscollco-core/service"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func main() {
-	s := service.New("example service")
-	s.Router().Get("/template", handlerBasic.Handle)
-	s.Router().Get("/template/:one", handlerBasic.Handle)
-	s.Router().WithShutdownFunc(func(resources router.Resources) {
-		resources.Log().Info("http router shutodwn function processing")
-	})
+	s := service.New("1Password Custom Operator")
 
-	if err := s.ProcessGroup().Process(pinger, "pinger"); err != nil {
-		s.Log().Error("unable to launch pinger process", "error", err.Error())
-		os.Exit(0)
-	}
-	s.ProcessGroup().WithShutdownFunc(func(resources processGroupInterfaces.Resources) {
-		resources.Log().Info("processgroup shutdown function processing")
-	})
 	if err := s.Config().Populate(&conf.Config); err != nil {
 		s.Log().Error("unable to populate config", "error", err.Error())
 		os.Exit(0)
 	}
-	s.Run()
-}
 
-func pinger(process processGroupInterfaces.Process) error {
-	process.Log().Info("ping")
-	return nil
+	go func() {
+		log.SetLogger(logLib.NewLogr(s.Log().Child("operator", "person")))
+		op := operatorLib.New("person-controller", operator.Reconcile(s.Log().Child("operator", "person")))
+		if err := op.Start("crds.driscollco", "v1", &crds.Secret{}, &crds.SecretList{}); err != nil {
+			s.Log().Error("unable to start the operator", "error", err.Error())
+			os.Exit(0)
+		}
+	}()
+	s.Run()
 }

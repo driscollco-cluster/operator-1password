@@ -7,15 +7,15 @@ image:
   pullPolicy: Always
 
 service:
-  name: my-test-service
-  namespace: testing
+  name: driscollco-1password
+  namespace: 1password
   instances: 1
   port: 80
   ingress:
     host:
       - cluster.jdd.me.uk
       - mac-studio
-    path: /template
+    path: /operators/1password
     port: 80
 
 resources: {}
