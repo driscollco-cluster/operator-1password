@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  codePath: cmd
+  buildPath: cmd/build
+  gcpRegion: europe-west1
+
+jobs:
+  build-binary:
+    name: Compile Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Access
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Compile Service
+        run: cd $buildPath; make build
+      - name: Save Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: ${{ env.buildPath }}/service
+  docker:
+    name: Store In Artifact Registry
+    runs-on: ubuntu-latest
+    needs: build-binary
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Yq
+        run: |
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+      - id: auth
+        name: Install Key
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_KEY }}
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Use gcloud CLI
+        run: gcloud info
+      - name: Configure Docker
+        run: gcloud auth configure-docker $gcpRegion-docker.pkg.dev --quiet
+      - name: Fetch Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary
+      - name: Permissions Update
+        run: chmod a+x service
+      - name: Relocate Binary
+        run: mv service $buildPath
+      - name: Send To Docker
+        run: cd $buildPath; make docker
+  cluster:
+    name: Deploy To Cluster
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          version: latest
+          tags: tag:gh-actions
+      - name: Setup KubeConfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
+          export KUBECONFIG=~/.kube/config
+      - name: Deploy to Kubernetes
+        run: cd $buildPath; make deploy
+

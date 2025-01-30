@@ -1,0 +1,64 @@
+name: Checks
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+env:
+  codeCoverageMinimum: 0
+
+jobs:
+  code-formatting:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Github Access
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Formatting Check
+        run: make check-formatting
+  run-go-vet:
+    name: Go Vet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Github Access
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Go Vet
+        run: make govet
+  code-linting:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Github Access
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Linting
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+          args: --timeout=30m
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Github Access
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Test Coverage
+        run: make coverage
+  run-go-unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Github Access
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Unit Tests
+        run: make test

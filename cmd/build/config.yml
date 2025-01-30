@@ -1,0 +1,21 @@
+image:
+  artifactRegistry:
+    hostname: europe-west1-docker.pkg.dev
+    project: driscollco-test
+    repo: containers
+  tag: latest
+  pullPolicy: Always
+
+service:
+  name: my-test-service
+  namespace: testing
+  instances: 1
+  port: 80
+  ingress:
+    host:
+      - cluster.jdd.me.uk
+      - mac-studio
+    path: /template
+    port: 80
+
+resources: {}

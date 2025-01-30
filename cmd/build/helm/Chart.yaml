@@ -1,0 +1,4 @@
+apiVersion: v2 # or v3 depending on your Helm version
+name: go-service-deployment
+version: "1.0.1"
+description: A helm chart to deploy a service into the Kubernetes cluster
