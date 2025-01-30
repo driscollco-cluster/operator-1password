@@ -1,3 +1,7 @@
+.PHONY: generate
+generate:
+	@cd internal/crds; go generate
+
 .PHONY: run
 run:
 	@cd cmd; go run main.go
