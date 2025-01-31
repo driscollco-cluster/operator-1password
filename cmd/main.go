@@ -5,8 +5,8 @@ import (
 	"github.com/driscollco-cluster/operator-1password/internal/crds"
 	"github.com/driscollco-cluster/operator-1password/internal/operator"
 	operatorLib "github.com/driscollco-core/kubernetes-operator"
-	logLib "github.com/driscollco-core/log"
 	"github.com/driscollco-core/service"
+	"github.com/go-logr/logr"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -20,7 +20,7 @@ func main() {
 	}
 
 	go func() {
-		log.SetLogger(logLib.NewLogr(s.Log().Child("operator", "driscollco-1password")))
+		log.SetLogger(logr.Discard())
 		actualOp := operator.New(s.Log().Child("operator", "driscollco-1password"))
 		op := operatorLib.New("driscollco-1password", actualOp.Reconcile)
 		if err := op.Start("crds.driscollco", "v1", &crds.ExternalSecret{}, &crds.ExternalSecretList{}); err != nil {
