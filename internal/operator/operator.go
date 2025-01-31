@@ -108,6 +108,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return ctrl.Result{}, err
 	}
 
+	if secret.Status.Events == nil {
+		secret.Status.Events = []crds.Event{}
+	}
+
 	secret.Status.LastUpdated = metav1.NewTime(time.Now())
 	err = k8sClient.Status().Update(ctx, secret)
 	if err != nil {
