@@ -20,9 +20,9 @@ func main() {
 	}
 
 	go func() {
-		log.SetLogger(logLib.NewLogr(s.Log().Child("operator", "person")))
-		op := operatorLib.New("person-controller", operator.Reconcile(s.Log().Child("operator", "person")))
-		if err := op.Start("crds.driscollco", "v1", &crds.Secret{}, &crds.SecretList{}); err != nil {
+		log.SetLogger(logLib.NewLogr(s.Log().Child("operator", "driscollco-1password")))
+		op := operatorLib.New("driscollco-1password", operator.Reconcile(s.Log().Child("operator", "driscollco-1password")))
+		if err := op.Start("crds.driscollco", "v1", &crds.ExternalSecret{}, &crds.ExternalSecretList{}); err != nil {
 			s.Log().Error("unable to start the operator", "error", err.Error())
 			os.Exit(0)
 		}

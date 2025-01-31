@@ -14,7 +14,7 @@ func Reconcile(log log.Log) operatorLib.ReconcileFunc {
 	return func(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder) (ctrl.Result, error) {
 		log.Info("reconcile started for resource", "name", req.Name, "namespace", req.Namespace)
 
-		secret := &crds.Secret{}
+		secret := &crds.ExternalSecret{}
 		if err := k8sClient.Get(ctx, req.NamespacedName, secret); err != nil {
 			log.Error("unable to fetch secret resource", "error", err.Error())
 			return ctrl.Result{}, client.IgnoreNotFound(err)
