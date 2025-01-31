@@ -40,30 +40,30 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	o.log.Info("request to fetch secret from 1Password", "vault", secret.Spec.SourceVault,
-		"item", secret.Spec.SourceItem, "section", secret.Spec.SourceSection, "key", secret.Spec.SourceKey)
+	o.log.Info("request to fetch secret from 1Password", "vault", secret.Spec.Source.Vault,
+		"item", secret.Spec.Source.Item, "section", secret.Spec.Source.Section)
 
-	info, err := o.client.GetKey(secret.Spec.SourceVault, secret.Spec.SourceItem, secret.Spec.SourceSection, secret.Spec.SourceKey)
-	if err != nil {
-		o.log.Error("error fetching information from 1Password", "error", err.Error())
-		return ctrl.Result{}, nil
-	}
-
-	// Define the new Kubernetes Secret
 	k8sSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Spec.DestinationName,      // Use a name defined in ExternalSecret CR
-			Namespace: secret.Spec.DestinationNamespace, // Store it in the same namespace as the ExternalSecret CR
+			Name:      secret.Spec.Secret.Name,
+			Namespace: secret.Spec.Secret.Namespace,
 		},
-		Type: corev1.SecretTypeOpaque,
-		StringData: map[string]string{
-			secret.Spec.SourceKey: info, // Store the secret value in the key
-		},
+		Type:       corev1.SecretTypeOpaque,
+		StringData: make(map[string]string),
+	}
+
+	for _, keyMapping := range secret.Spec.Secret.Keys {
+		info, err := o.client.GetKey(secret.Spec.Source.Vault, secret.Spec.Source.Item, secret.Spec.Source.Item, keyMapping.From)
+		if err != nil {
+			o.log.Error("error fetching information from 1Password", "error", err.Error())
+			return ctrl.Result{}, nil
+		}
+		k8sSecret.StringData[keyMapping.To] = info
 	}
 
 	// Check if the secret already exists
 	existingSecret := &corev1.Secret{}
-	err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
+	err := k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
 
 	if err != nil && errors.IsNotFound(err) {
 		// Secret does not exist, create it
