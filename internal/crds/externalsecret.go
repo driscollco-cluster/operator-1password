@@ -38,13 +38,38 @@ type Event struct {
 
 // ExternalSecretSpec contains instructions on how to source and create a secret
 type ExternalSecretSpec struct {
-	SourceVault           string `json:"source-vault"`
-	SourceItem            string `json:"source-item"`
-	SourceSection         string `json:"source-section"`
-	SourceKey             string `json:"source-key"`
-	DestinationNamespace  string `json:"destination-namespace"`
-	DestinationName       string `json:"destination-name"`
-	DestinationSecretType string `json:"destination-secret-type"`
+	Source SourceConfig `json:"source"`
+	Secret SecretConfig `json:"secret"`
+}
+
+// SourceConfig defines the location within 1Password where the information can be found
+type SourceConfig struct {
+	Vault   string `json:"vault"`
+	Item    string `json:"item"`
+	Section string `json:"section"`
+}
+
+type KeyMapping struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// SecretConfig defines the location within Kubernetes where the secret should be created
+type SecretConfig struct {
+	// The name of the secret
+	Name string `json:"name"`
+	// The namespace the secret should be created in
+	Namespace string `json:"namespace"`
+	// +kubebuilder:validation:Enum=Basic;Docker
+	// Type of secret. Leave unpopulated for a standard secret. Choose Docker for a secret which can be used to pull images from a registry.
+	// If using 'Docker' as the type you don't need to specify any keys as this will be done for you
+	// Possible types:
+	//   * Basic - Standard secret
+	//   * Docker - Secret used for pulling images from a docker registry
+	SecretType string `json:"secret-type"`
+	// Keys maps individual 1Password section keys to data items within a secret
+	// This does not need to be populated for Docker secret types as this will be calculated by the operator
+	Keys []KeyMapping `json:"keys,omitempty"`
 }
 
 //go:generate controller-gen object crd paths=./... output:crd:dir=../../cmd/build/helm/crds
