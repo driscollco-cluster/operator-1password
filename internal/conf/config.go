@@ -12,4 +12,9 @@ type config struct {
 			Token string
 		}
 	}
+	Secrets struct {
+		Refresh struct {
+			MinIntervalSeconds int
+		}
+	}
 }
