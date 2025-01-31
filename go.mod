@@ -5,18 +5,18 @@ go 1.23.0
 toolchain go1.23.1
 
 require (
+	github.com/driscollco-cluster/1password v1.0.1
 	github.com/driscollco-core/cache v1.0.6
 	github.com/driscollco-core/firestore v1.0.4
-	github.com/driscollco-core/http-client v1.0.4
 	github.com/driscollco-core/http-router v1.0.24
 	github.com/driscollco-core/kubernetes-operator v1.0.5
 	github.com/driscollco-core/log v1.0.13
-	github.com/driscollco-core/process-group v1.0.16
 	github.com/driscollco-core/service v1.0.18
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.35.1
 	go.uber.org/mock v0.5.0
 	k8s.io/apimachinery v0.32.1
+	k8s.io/client-go v0.32.0
 	sigs.k8s.io/controller-runtime v0.20.1
 )
 
@@ -34,6 +34,8 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/driscollco-core/gcp-pub-sub v1.0.1 // indirect
+	github.com/driscollco-core/http-client v1.0.4 // indirect
+	github.com/driscollco-core/process-group v1.0.16 // indirect
 	github.com/driscollcode/tls-self-sign v0.0.0-20220205113746-ef221872e471 // indirect
 	github.com/driscollos/config v1.5.5 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
@@ -99,7 +101,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.32.0 // indirect
 	k8s.io/apiextensions-apiserver v0.32.0 // indirect
-	k8s.io/client-go v0.32.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
