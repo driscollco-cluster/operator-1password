@@ -60,12 +60,12 @@ type SecretConfig struct {
 	Name string `json:"name"`
 	// The namespace the secret should be created in
 	Namespace string `json:"namespace"`
-	// +kubebuilder:validation:Enum=Basic;Docker
-	// Type of secret. Leave unpopulated for a standard secret. Choose Docker for a secret which can be used to pull images from a registry.
-	// If using 'Docker' as the type you don't need to specify any keys as this will be done for you
+	// +kubebuilder:validation:Enum=basic;docker
+	// Type of secret. Leave unpopulated for a standard secret. Choose docker for a secret which can be used to pull images from a registry.
+	// If using 'docker' as the type you don't need to specify any keys as this will be done for you
 	// Possible types:
-	//   * Basic - Standard secret
-	//   * Docker - Secret used for pulling images from a docker registry
+	//   * basic - Standard secret
+	//   * docker - Secret used for pulling images from a docker registry
 	SecretType string `json:"secret-type"`
 	// Keys maps individual 1Password section keys to data items within a secret
 	// This does not need to be populated for Docker secret types as this will be calculated by the operator

@@ -53,7 +53,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	}
 
 	for _, keyMapping := range secret.Spec.Secret.Keys {
-		info, err := o.client.GetKey(secret.Spec.Source.Vault, secret.Spec.Source.Item, secret.Spec.Source.Item, keyMapping.From)
+		info, err := o.client.GetKey(secret.Spec.Source.Vault, secret.Spec.Source.Item, secret.Spec.Source.Section, keyMapping.From)
 		if err != nil {
 			o.log.Error("error fetching information from 1Password", "error", err.Error())
 			return ctrl.Result{}, nil
