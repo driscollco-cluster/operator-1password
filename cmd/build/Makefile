@@ -1,9 +1,9 @@
-repoName = $(shell yq '.image.artifactRegistry.repo' config.yml)
-serviceName = $(shell yq '.service.name' config.yml)
-project = $(shell yq '.image.artifactRegistry.project' config.yml)
-region = $(shell yq '.image.artifactRegistry.hostname' config.yml)
-tag = $(shell yq '.image.tag' config.yml)
-namespace = $(shell yq '.service.namespace' config.yml)
+repoName = $(shell yq '.image.artifactRegistry.repo' helm/values.yaml)
+serviceName = $(shell yq '.service.name' helm/values.yaml)
+project = $(shell yq '.image.artifactRegistry.project' helm/values.yaml)
+region = $(shell yq '.image.artifactRegistry.hostname' helm/values.yaml)
+tag = $(shell yq '.image.tag' helm/values.yaml)
+namespace = $(shell yq '.service.namespace' helm/values.yaml)
 
 .PHONY: build
 build:
