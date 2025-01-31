@@ -17,6 +17,9 @@ service:
       - mac-studio
     path: /operators/onepass
     port: 80
+  dependencies:
+    onepassword:
+      path: "http://onepassword-connect.onepass.svc.cluster.local:8080"
 
 resources: {}
 
