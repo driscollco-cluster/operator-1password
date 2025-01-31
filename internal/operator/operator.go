@@ -35,7 +35,7 @@ type operator struct {
 func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder) (ctrl.Result, error) {
 	o.log.Info("reconcile started for resource", "name", req.Name, "namespace", req.Namespace)
 
-	secret := &crds.ExternalSecret{}
+	secret := &crds.OPSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, secret); err != nil {
 		o.log.Error("unable to fetch secret resource", "error", err.Error())
 		return ctrl.Result{}, client.IgnoreNotFound(err)

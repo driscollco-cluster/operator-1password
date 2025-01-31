@@ -1,5 +1,5 @@
 //+kubebuilder:object:generate=true
-//+groupName=crds.driscollco
+//+groupName=crds.driscoll.co
 //+versionName=v1
 
 package crds
@@ -14,16 +14,16 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //+kubebuilder:printcolumn:name="Section",type=string,JSONPath=".spec.source-section",description="The item the secret is sourced from"
 //+kubebuilder:printcolumn:name="Key",type=string,JSONPath=".spec.source-key",description="The name of the subitem which contains the secret"
 
-// ExternalSecret is the intention to create a secret from a 1Password item
-type ExternalSecret struct {
+// OPSecret is the intention to create a secret from a 1Password item
+type OPSecret struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	metav1.TypeMeta   `json:",inline"`
-	Spec              ExternalSecretSpec   `json:"spec,omitempty"`
-	Status            ExternalSecretStatus `json:"status,omitempty"`
+	Spec              OPSecretSpec   `json:"spec,omitempty"`
+	Status            OPSecretStatus `json:"status,omitempty"`
 }
 
-// ExternalSecretStatus defines the state of a secret as it is created
-type ExternalSecretStatus struct {
+// OPSecretStatus defines the state of a secret as it is created
+type OPSecretStatus struct {
 	Phase       string             `json:"phase,omitempty"`
 	Conditions  []metav1.Condition `json:"conditions,omitempty"`
 	Events      []Event            `json:"events,omitempty"`
@@ -37,8 +37,8 @@ type Event struct {
 	Message   string      `json:"message"`
 }
 
-// ExternalSecretSpec contains instructions on how to source and create a secret
-type ExternalSecretSpec struct {
+// OPSecretSpec contains instructions on how to source and create a secret
+type OPSecretSpec struct {
 	Source SourceConfig `json:"source"`
 	Secret SecretConfig `json:"secret"`
 }
@@ -78,8 +78,8 @@ type SecretConfig struct {
 //go:generate controller-gen object crd paths=./... output:crd:dir=../../cmd/build/helm/crds
 
 // +kubebuilder:object:root=true
-type ExternalSecretList struct {
+type OPSecretList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ExternalSecret `json:"items"`
+	Items           []OPSecret `json:"items"`
 }
