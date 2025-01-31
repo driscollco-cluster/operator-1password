@@ -20,6 +20,14 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.port }}
+          env:
+            - name: OnePassword_Api_Url
+              value: "http://onepassword-connect.1password.svc.cluster.local:8080"
+            - name: OnePassword_Api_Token
+              valueFrom:
+                secretKeyRef:
+                  name: onepassword-api
+                  key: token
       imagePullSecrets:
         - name: credentials-gcp-key
       serviceAccountName: operator-driscollco-1password

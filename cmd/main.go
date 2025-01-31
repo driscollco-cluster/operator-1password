@@ -21,7 +21,8 @@ func main() {
 
 	go func() {
 		log.SetLogger(logLib.NewLogr(s.Log().Child("operator", "driscollco-1password")))
-		op := operatorLib.New("driscollco-1password", operator.Reconcile(s.Log().Child("operator", "driscollco-1password")))
+		actualOp := operator.New(s.Log().Child("operator", "driscollco-1password"))
+		op := operatorLib.New("driscollco-1password", actualOp.Reconcile)
 		if err := op.Start("crds.driscollco", "v1", &crds.ExternalSecret{}, &crds.ExternalSecretList{}); err != nil {
 			s.Log().Error("unable to start the operator", "error", err.Error())
 			os.Exit(0)
