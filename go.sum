@@ -35,8 +35,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/driscollco-cluster/1password v1.0.1 h1:89yOx30VOxJ7g3YrIA8Qi89E3iQ/Tjv7DqCPEIz8oVs=
-github.com/driscollco-cluster/1password v1.0.1/go.mod h1:ZJS5u1DfE37MrwvEWqjMdtmqykVZ7QAp1bDjmm9YEq0=
+github.com/driscollco-cluster/1password v1.0.2 h1:lnSHEJdwg68NqDZFqQwZnxvY51OOvlIAl/O9soYaRW8=
+github.com/driscollco-cluster/1password v1.0.2/go.mod h1:ZJS5u1DfE37MrwvEWqjMdtmqykVZ7QAp1bDjmm9YEq0=
 github.com/driscollco-core/cache v1.0.6 h1:sMOf8B8LB3XdpTH/edeeAiMYdewvYGdGc77DReBcrU8=
 github.com/driscollco-core/cache v1.0.6/go.mod h1:yGd0MxBeswoXQ8SpZqY6i74nlkky2sNKG0PO+PBV/Wk=
 github.com/driscollco-core/firestore v1.0.4 h1:DLJL3YrGLJbW+9ar4fYeEeQzDI7CBfPe8trCCoyo6JQ=
