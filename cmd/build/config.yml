@@ -19,3 +19,6 @@ service:
     port: 80
 
 resources: {}
+
+Log:
+  Level: info
