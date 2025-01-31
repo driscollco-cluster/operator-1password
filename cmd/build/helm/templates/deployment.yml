@@ -22,3 +22,4 @@ spec:
             - containerPort: {{ .Values.service.port }}
       imagePullSecrets:
         - name: credentials-gcp-key
+      serviceAccountName: operator-driscollco-1password
