@@ -26,7 +26,7 @@ type ExternalSecret struct {
 type ExternalSecretStatus struct {
 	Phase       string             `json:"phase,omitempty"`
 	Conditions  []metav1.Condition `json:"conditions,omitempty"`
-	Events      []Event            `json:"events"`
+	Events      []Event            `json:"events,omitempty"`
 	LastUpdated metav1.Time        `json:"last-updated"`
 }
 
