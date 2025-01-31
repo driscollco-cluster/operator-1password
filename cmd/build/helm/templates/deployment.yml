@@ -26,7 +26,7 @@ spec:
             - name: OnePassword_Api_Url
               value: "http://onepassword-connect.1password.svc.cluster.local:8080"
             - name: Secrets_Refresh_MinIntervalSeconds
-              value: {{ .Values.behaviours.secrets.refresh.intervalMinSeconds }}
+              value: "{{ .Values.behaviours.secrets.refresh.intervalMinSeconds }}"
             - name: OnePassword_Api_Token
               valueFrom:
                 secretKeyRef:
