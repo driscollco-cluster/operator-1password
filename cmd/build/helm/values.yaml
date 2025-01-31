@@ -1,1 +1,29 @@
-../config.yml
+image:
+  artifactRegistry:
+    hostname: europe-west1-docker.pkg.dev
+    project: driscollco-test
+    repo: containers
+  tag: latest
+  pullPolicy: Always
+
+service:
+  name: driscollco-1password
+  namespace: 1password
+  instances: 1
+  port: 80
+  ingress:
+    host:
+      - cluster.jdd.me.uk
+      - mac-studio
+    path: /operators/1password
+    port: 80
+
+resources: {}
+
+behaviours:
+  secrets:
+    refresh:
+      intervalMinSeconds: 30
+
+Log:
+  Level: info

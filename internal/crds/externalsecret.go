@@ -24,9 +24,10 @@ type ExternalSecret struct {
 
 // ExternalSecretStatus defines the state of a secret as it is created
 type ExternalSecretStatus struct {
-	Phase      string             `json:"phase,omitempty"`
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	Events     []Event            `json:"events"`
+	Phase       string             `json:"phase,omitempty"`
+	Conditions  []metav1.Condition `json:"conditions,omitempty"`
+	Events      []Event            `json:"events"`
+	LastUpdated metav1.Time        `json:"last-updated"`
 }
 
 type Event struct {
@@ -60,6 +61,8 @@ type SecretConfig struct {
 	Name string `json:"name"`
 	// The namespace the secret should be created in
 	Namespace string `json:"namespace"`
+	// Check this secret every N seconds in 1Password and update the secret if anything changes
+	RefreshSeconds int `json:"refresh-seconds"`
 	// +kubebuilder:validation:Enum=basic;docker
 	// Type of secret. Leave unpopulated for a standard secret. Choose docker for a secret which can be used to pull images from a registry.
 	// If using 'docker' as the type you don't need to specify any keys as this will be done for you
