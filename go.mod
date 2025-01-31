@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.1
 
 require (
-	github.com/driscollco-cluster/1password v1.0.2
+	github.com/driscollco-cluster/1password v1.0.3
 	github.com/driscollco-core/cache v1.0.6
 	github.com/driscollco-core/firestore v1.0.4
 	github.com/driscollco-core/http-router v1.0.24
