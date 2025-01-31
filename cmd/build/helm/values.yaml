@@ -7,16 +7,19 @@ image:
   pullPolicy: Always
 
 service:
-  name: driscollco-1password
-  namespace: 1password
+  name: operator-opsecrets
+  namespace: onepass
   instances: 1
   port: 80
   ingress:
     host:
       - cluster.jdd.me.uk
       - mac-studio
-    path: /operators/1password
+    path: /operators/onepass
     port: 80
+  dependencies:
+    onepassword:
+      path: "http://onepassword-connect.onepass.svc.cluster.local:8080"
 
 resources: {}
 
