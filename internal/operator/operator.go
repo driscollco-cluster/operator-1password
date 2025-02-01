@@ -96,6 +96,17 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 		o.log.Info("Updated kubenetes secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
 
+		if opsecret.Status.Events == nil {
+			opsecret.Status.Events = []crds.Event{}
+		}
+
+		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
+			Timestamp: metav1.Now(),
+			Type:      "update",
+			Reason:    "upstream-change",
+			Message:   "secret has been updated to reflect changes from 1Password",
+		})
+
 		// Find pods that reference this opsecret
 		podList := &corev1.PodList{}
 		err = k8sClient.List(ctx, podList, client.InNamespace(req.Namespace))
@@ -130,8 +141,6 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		o.log.Error("failed to update the last updated time for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
-
-	o.log.Info("status of opsecret updated")
 
 	if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}, nil
