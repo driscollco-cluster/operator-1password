@@ -90,6 +90,13 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 		o.log.Info("Created new opsecret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
+
+		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
+			Timestamp: metav1.Now(),
+			Type:      "create",
+			Reason:    "secret-not-found",
+			Message:   "Secret created to represent data from 1Password",
+		})
 	} else if err == nil {
 		// Secret exists, update it
 		existingSecret.StringData = k8sSecret.StringData
