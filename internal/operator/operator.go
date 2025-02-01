@@ -89,10 +89,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	if err != nil && errors.IsNotFound(err) {
 		err = k8sClient.Create(ctx, k8sSecret)
 		if err != nil {
-			o.log.Error("Failed to create Kubernetes Secret", "error", err.Error())
+			o.log.Error("Failed to create secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("Created new opsecret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
+		o.log.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
@@ -106,10 +106,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		existingSecret.StringData = k8sSecret.StringData
 		err = k8sClient.Update(ctx, existingSecret)
 		if err != nil {
-			o.log.Error("Failed to update Kubernetes Secret", "error", err.Error())
+			o.log.Error("failed to update secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("Updated kubenetes secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
+		o.log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp:   metav1.Now(),
@@ -138,7 +138,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 
 	} else {
-		o.log.Error("Error checking for existing Kubernetes Secret", "error", err.Error())
+		o.log.Error("error checking for existing secret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
