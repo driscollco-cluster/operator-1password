@@ -68,6 +68,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 	}
 
+	o.log.Info("comparing last updated time to the time the secret was last updated",
+		"lastUpdated", opsecret.Status.LastUpdated.Time.Format(time.DateTime),
+		"lastSecretUpdate", latestUpdate.Format(time.DateTime))
+
 	if opsecret.Status.LastUpdated.Time.Before(latestUpdate) {
 		return ctrl.Result{}, nil
 	}
@@ -91,7 +95,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			o.log.Error("Failed to update Kubernetes Secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("Updated opsecret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
+		o.log.Info("Updated kubenetes secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
 
 		// Find pods that reference this opsecret
 		podList := &corev1.PodList{}
@@ -127,6 +131,8 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		o.log.Error("failed to update the last updated time for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
+
+	o.log.Info("status of opsecret updated")
 
 	if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}, nil
