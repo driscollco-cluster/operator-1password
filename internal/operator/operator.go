@@ -68,10 +68,6 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 	}
 
-	o.log.Info("comparing last updated time to the time the secret was last updated",
-		"lastUpdated", opsecret.Status.LastUpdated.Time.Format(time.DateTime),
-		"lastSecretUpdate", latestUpdate.Format(time.DateTime))
-
 	if opsecret.Status.LastUpdated.Time.After(latestUpdate) {
 		if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
 			return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}, nil
