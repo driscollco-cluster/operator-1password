@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	s := service.New("1Password Custom Operator")
+	s := service.New("Onepass Secrets Operator")
 
 	if err := s.Config().Populate(&conf.Config); err != nil {
 		s.Log().Error("unable to populate config", "error", err.Error())
