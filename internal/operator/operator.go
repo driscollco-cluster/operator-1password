@@ -44,9 +44,25 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	log := o.log.Child("source.vault", opsecret.Spec.Source.Vault, "source.item", opsecret.Spec.Source.Item, "source.section", opsecret.Spec.Source.Section)
 
 	if opsecret.Status.Events == nil {
 		opsecret.Status.Events = []crds.Event{}
+	}
+
+	item, err := o.client.GetItem(opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item)
+	if err != nil {
+		log.Info("error fetching item from 1Password", "error", err.Error())
+		return ctrl.Result{}, err
+	}
+
+	section, ok := item.Values[opsecret.Spec.Source.Section]
+	if !ok {
+		o.log.Info("section was not found when looking for updates to secret")
+		return o.getRequeue(opsecret), nil
+	}
+	if !o.updateRequired(opsecret, section) {
+		return o.getRequeue(opsecret), nil
 	}
 
 	k8sSecret := &corev1.Secret{
@@ -63,29 +79,9 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return ctrl.Result{}, err
 	}
 
-	latestUpdate := time.Time{}
-	for _, keyMapping := range opsecret.Spec.Secret.Keys {
-		info, err := o.client.GetKey(opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section, keyMapping.From)
-		if err != nil {
-			o.log.Error("error fetching information from 1Password", "error", err.Error())
-			return ctrl.Result{}, nil
-		}
-		k8sSecret.StringData[keyMapping.To] = info.Value
-		if info.LastUpdated.After(latestUpdate) {
-			latestUpdate = info.LastUpdated
-		}
-	}
-
-	if opsecret.Status.LastUpdated.Time.After(latestUpdate) {
-		if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
-			return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}, nil
-		}
-		return ctrl.Result{}, nil
-	}
-
 	// Check if the opsecret already exists
 	existingSecret := &corev1.Secret{}
-	err := k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
+	err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
 	if err != nil && errors.IsNotFound(err) {
 		err = k8sClient.Create(ctx, k8sSecret)
 		if err != nil {
@@ -98,7 +94,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp:   metav1.Now(),
-			OpTimestamp: metav1.NewTime(latestUpdate),
+			OpTimestamp: metav1.NewTime(section.LastUpdated),
 			Type:        "create",
 			Message:     "Secret created from 1Password data",
 		})
@@ -114,7 +110,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp:   metav1.Now(),
-			OpTimestamp: metav1.NewTime(latestUpdate),
+			OpTimestamp: metav1.NewTime(section.LastUpdated),
 			Type:        "update",
 			Message:     "secret has been updated to reflect changes in 1Password",
 		})
@@ -154,10 +150,31 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return ctrl.Result{}, err
 	}
 
-	if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}, nil
+	return o.getRequeue(opsecret), nil
+}
+
+func (o operator) updateRequired(opsecret *crds.OpSecret, section onepassword.Section) bool {
+	if opsecret.Status.LastUpdated.Time.After(section.LastUpdated) {
+		return false
 	}
-	return ctrl.Result{}, nil
+
+	if opsecret.Spec.Secret.SecretType == "docker" {
+		return true
+	}
+
+	for _, keyMapping := range opsecret.Spec.Secret.Keys {
+		if opsecret.Status.LastUpdated.Time.After(section.Values[keyMapping.From].LastUpdated) {
+			return false
+		}
+	}
+	return true
+}
+
+func (o operator) getRequeue(opsecret *crds.OpSecret) ctrl.Result {
+	if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}
+	}
+	return ctrl.Result{}
 }
 
 func isPodUsingSecret(pod *corev1.Pod, secretName string) bool {
