@@ -58,7 +58,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 	section, ok := item.Values[opsecret.Spec.Source.Section]
 	if !ok {
-		o.log.Info("section was not found when looking for updates to secret")
+		log.Info("section was not found when looking for updates to secret")
 		return o.getRequeue(opsecret), nil
 	}
 	if !o.updateRequired(opsecret, section) {
@@ -75,7 +75,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	}
 
 	if err := controllerutil.SetControllerReference(opsecret, k8sSecret, scheme); err != nil {
-		o.log.Error("error setting owner reference for opsecret", "error", err.Error())
+		log.Error("error setting owner reference for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -85,10 +85,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	if err != nil && errors.IsNotFound(err) {
 		err = k8sClient.Create(ctx, k8sSecret)
 		if err != nil {
-			o.log.Error("Failed to create secret", "error", err.Error())
+			log.Error("Failed to create secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
+		log.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
 			"opsecret", opsecret.Name,
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
@@ -103,10 +103,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		existingSecret.StringData = k8sSecret.StringData
 		err = k8sClient.Update(ctx, existingSecret)
 		if err != nil {
-			o.log.Error("failed to update secret", "error", err.Error())
+			log.Error("failed to update secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
+		log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp:   metav1.Now(),
@@ -119,23 +119,23 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		podList := &corev1.PodList{}
 		err = k8sClient.List(ctx, podList, client.InNamespace(req.Namespace))
 		if err != nil {
-			o.log.Error("failed to list pods", "error", err.Error())
+			log.Error("failed to list pods", "error", err.Error())
 			return ctrl.Result{}, err
 		}
 
 		// Iterate over pods and delete those using the opsecret
 		for _, pod := range podList.Items {
 			if isPodUsingSecret(&pod, opsecret.Name) {
-				o.log.Info("Deleting pod using updated opsecret", "pod", pod.Name)
+				log.Info("Deleting pod using updated opsecret", "pod", pod.Name)
 				err = k8sClient.Delete(ctx, &pod)
 				if err != nil {
-					o.log.Error("failed to delete pod", "pod", pod.Name, "error", err.Error())
+					log.Error("failed to delete pod", "pod", pod.Name, "error", err.Error())
 				}
 			}
 		}
 
 	} else {
-		o.log.Error("error checking for existing secret", "error", err.Error())
+		log.Error("error checking for existing secret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -146,7 +146,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	opsecret.Status.LastUpdated = metav1.NewTime(time.Now())
 	err = k8sClient.Status().Update(ctx, opsecret)
 	if err != nil {
-		o.log.Error("failed to update the last updated time for opsecret", "error", err.Error())
+		log.Error("failed to update the last updated time for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
