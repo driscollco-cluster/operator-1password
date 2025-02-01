@@ -1,0 +1,14 @@
+apiVersion: crds.driscoll.co/v1
+kind: OpSecret
+metadata:
+  name: gcp-key-driscollco-test
+  namespace: testing
+spec:
+  source:
+    vault: Cluster
+    item: "GCP Keys"
+    section: driscollco-test
+  secret:
+    name: gcp-key-driscollco-test
+    secret-type: docker
+    refresh-seconds: 30

@@ -135,7 +135,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 		// Iterate over pods and delete those using the opsecret
 		for _, pod := range podList.Items {
-			if isPodUsingSecret(&pod, opsecret.Name) {
+			if isPodUsingSecret(&pod, opsecret.Spec.Secret.Name) {
 				log.Info("Deleting pod using updated opsecret", "pod", pod.Name)
 				err = k8sClient.Delete(ctx, &pod)
 				if err != nil {
