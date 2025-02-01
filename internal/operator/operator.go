@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"fmt"
 	onepassword "github.com/driscollco-cluster/1password"
 	"github.com/driscollco-cluster/operator-1password/internal/conf"
 	"github.com/driscollco-cluster/operator-1password/internal/crds"
@@ -9,15 +10,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 )
 
 type Operator interface {
-	Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder) (ctrl.Result, error)
+	Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error)
 }
 
 func New(log log.Log) Operator {
@@ -32,17 +35,12 @@ type operator struct {
 	log    log.Log
 }
 
-func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder) (ctrl.Result, error) {
-	o.log.Info("reconcile started for resource", "name", req.Name, "namespace", req.Namespace)
-
+func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error) {
 	secret := &crds.OPSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, secret); err != nil {
 		o.log.Error("unable to fetch secret resource", "error", err.Error())
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
-	o.log.Info("request to fetch secret from 1Password", "vault", secret.Spec.Source.Vault,
-		"item", secret.Spec.Source.Item, "section", secret.Spec.Source.Section)
 
 	k8sSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -51,6 +49,11 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		},
 		Type:       corev1.SecretTypeOpaque,
 		StringData: make(map[string]string),
+	}
+
+	if err := controllerutil.SetControllerReference(secret, k8sSecret, scheme); err != nil {
+		o.log.Error("error setting owner reference for secret", "error", err.Error())
+		return ctrl.Result{}, err
 	}
 
 	for _, keyMapping := range secret.Spec.Secret.Keys {
@@ -67,13 +70,13 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
 
 	if err != nil && errors.IsNotFound(err) {
-		// Secret does not exist, create it
 		err = k8sClient.Create(ctx, k8sSecret)
 		if err != nil {
 			o.log.Error("Failed to create Kubernetes Secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("Successfully created Kubernetes Secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
+		o.log.Info("Created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
+			"source", fmt.Sprintf("%s/%s/%s", secret.Spec.Source.Vault, secret.Spec.Source.Item, secret.Spec.Source.Section))
 	} else if err == nil {
 		// Secret exists, update it
 		existingSecret.StringData = k8sSecret.StringData
@@ -82,7 +85,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			o.log.Error("Failed to update Kubernetes Secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("Successfully updated Kubernetes Secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
+		o.log.Info("Updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
 
 		// Find pods that reference this secret
 		podList := &corev1.PodList{}
