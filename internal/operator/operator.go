@@ -93,6 +93,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			return ctrl.Result{}, err
 		}
 		o.log.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
+			"opsecret", opsecret.Name,
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
@@ -109,7 +110,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			o.log.Error("failed to update secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
+		o.log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp:   metav1.Now(),

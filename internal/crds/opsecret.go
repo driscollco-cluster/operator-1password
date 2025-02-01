@@ -9,10 +9,10 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:type=customType
-//+kubebuilder:printcolumn:name="Vault",type=string,JSONPath=".spec.source-vault",description="The vault the secret is sourced from"
-//+kubebuilder:printcolumn:name="Item",type=string,JSONPath=".spec.source-item",description="The item the secret is sourced from"
-//+kubebuilder:printcolumn:name="Section",type=string,JSONPath=".spec.source-section",description="The item the secret is sourced from"
-//+kubebuilder:printcolumn:name="Key",type=string,JSONPath=".spec.source-key",description="The name of the subitem which contains the secret"
+//+kubebuilder:printcolumn:name="Type",type=string,JSONPath=".spec.secret.secret-type",description="The type of secret to create"
+//+kubebuilder:printcolumn:name="Vault",type=string,JSONPath=".spec.source.vault",description="The vault the secret is sourced from"
+//+kubebuilder:printcolumn:name="Item",type=string,JSONPath=".spec.source.item",description="The item the secret is sourced from"
+//+kubebuilder:printcolumn:name="Section",type=string,JSONPath=".spec.source.section",description="The item the secret is sourced from"
 
 // OpSecret is the intention to create a secret from a 1Password item
 type OpSecret struct {
