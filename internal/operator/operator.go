@@ -57,7 +57,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return ctrl.Result{}, err
 	}
 
-	section, ok := item.Values[opsecret.Spec.Source.Section]
+	section, ok := item.Content[opsecret.Spec.Source.Section]
 	if !ok {
 		theLog.Info("section was not found when looking for updates to secret")
 		return o.getRequeue(opsecret), nil
@@ -192,22 +192,22 @@ func (o operator) getDockerSecret(secretName, secretNamespace string, section on
 		return nil, errors.New("missing key: registry")
 	}
 
-	token, ok := section.Values["token"]
+	tokenFile, ok := section.Files["token.json"]
 	if !ok {
 		return nil, errors.New("missing key: token")
 	}
 
-	email, ok := section.Values["email"]
-	if !ok {
-		return nil, errors.New("missing key: email")
+	tokenData, err := o.client.FileContent(tokenFile)
+	if err != nil {
+		return nil, errors.New("missing file content: token.json")
 	}
 
 	dockerConfig := map[string]interface{}{
 		"auths": map[string]map[string]string{
 			registry.Value: {
 				"username": "_json_key",
-				"password": token.Value,
-				"email":    email.Value,
+				"password": string(tokenData),
+				"email":    "test@jdd.email",
 			},
 		},
 	}
