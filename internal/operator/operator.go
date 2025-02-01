@@ -9,6 +9,7 @@ import (
 	"github.com/driscollco-core/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,8 +37,11 @@ type operator struct {
 }
 
 func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error) {
-	opsecret := &crds.OPSecret{}
+	opsecret := &crds.OpSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, opsecret); err != nil {
+		if apierrors.IsNotFound(err) {
+			o.log.Info("opsecret has been deleted", "name", req.Name, "namespace", req.Namespace)
+		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -90,6 +94,13 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 		o.log.Info("Created new opsecret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
+
+		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
+			Timestamp:   metav1.Now(),
+			OpTimestamp: metav1.NewTime(latestUpdate),
+			Type:        "create",
+			Message:     "Secret created from 1Password data",
+		})
 	} else if err == nil {
 		// Secret exists, update it
 		existingSecret.StringData = k8sSecret.StringData
@@ -101,10 +112,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		o.log.Info("Updated kubenetes secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
-			Timestamp: metav1.Now(),
-			Type:      "update",
-			Reason:    "upstream-change",
-			Message:   "secret has been updated to reflect changes from 1Password",
+			Timestamp:   metav1.Now(),
+			OpTimestamp: metav1.NewTime(latestUpdate),
+			Type:        "update",
+			Message:     "secret has been updated to reflect changes in 1Password",
 		})
 
 		// Find pods that reference this opsecret

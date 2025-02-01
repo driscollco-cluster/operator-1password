@@ -14,16 +14,16 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //+kubebuilder:printcolumn:name="Section",type=string,JSONPath=".spec.source-section",description="The item the secret is sourced from"
 //+kubebuilder:printcolumn:name="Key",type=string,JSONPath=".spec.source-key",description="The name of the subitem which contains the secret"
 
-// OPSecret is the intention to create a secret from a 1Password item
-type OPSecret struct {
+// OpSecret is the intention to create a secret from a 1Password item
+type OpSecret struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	metav1.TypeMeta   `json:",inline"`
-	Spec              OPSecretSpec   `json:"spec,omitempty"`
-	Status            OPSecretStatus `json:"status,omitempty"`
+	Spec              OpSecretSpec   `json:"spec,omitempty"`
+	Status            OpSecretStatus `json:"status,omitempty"`
 }
 
-// OPSecretStatus defines the state of a secret as it is created
-type OPSecretStatus struct {
+// OpSecretStatus defines the state of a secret as it is created
+type OpSecretStatus struct {
 	Phase       string             `json:"phase,omitempty"`
 	Conditions  []metav1.Condition `json:"conditions,omitempty"`
 	Events      []Event            `json:"events,omitempty"`
@@ -31,14 +31,18 @@ type OPSecretStatus struct {
 }
 
 type Event struct {
+	// Timestmap is the time this event occurred
 	Timestamp metav1.Time `json:"timestamp"`
-	Type      string      `json:"type"` // e.g., "Created", "Updated", "Failed"
-	Reason    string      `json:"reason"`
-	Message   string      `json:"message"`
+	// OpTimestamp is the time a change occurred in 1Password
+	OpTimestamp metav1.Time `json:"op-timestamp"`
+	// Type is the type of event
+	Type string `json:"type"`
+	// Message is any extra information on the event
+	Message string `json:"message"`
 }
 
-// OPSecretSpec contains instructions on how to source and create a secret
-type OPSecretSpec struct {
+// OpSecretSpec contains instructions on how to source and create a secret
+type OpSecretSpec struct {
 	Source SourceConfig `json:"source"`
 	Secret SecretConfig `json:"secret"`
 }
@@ -76,8 +80,8 @@ type SecretConfig struct {
 //go:generate controller-gen object crd paths=./... output:crd:dir=../../cmd/build/helm/crds
 
 // +kubebuilder:object:root=true
-type OPSecretList struct {
+type OpSecretList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OPSecret `json:"items"`
+	Items           []OpSecret `json:"items"`
 }
