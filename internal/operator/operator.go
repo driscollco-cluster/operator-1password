@@ -69,7 +69,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	k8sSecret := &corev1.Secret{}
 	switch opsecret.Spec.Secret.SecretType {
 	case "docker":
-		k8sSecret, err = o.getDockerSecret(opsecret.Spec.Secret.Name, req.Namespace, section)
+		k8sSecret, err = o.getDockerSecret(opsecret, section)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -186,25 +186,28 @@ func (o operator) getRequeue(opsecret *crds.OpSecret) ctrl.Result {
 	return ctrl.Result{}
 }
 
-func (o operator) getDockerSecret(secretName, secretNamespace string, section onepassword.Section) (*corev1.Secret, error) {
-	registry, ok := section.Values["registry"]
-	if !ok {
-		return nil, errors.New("missing key: registry")
+func (o operator) getDockerSecret(opsecret *crds.OpSecret, section onepassword.Section) (*corev1.Secret, error) {
+	if opsecret.Spec.Secret.SecretType != "docker" {
+		return nil, errors.New("wrong secret type: " + opsecret.Spec.Secret.SecretType)
 	}
 
-	tokenFile, ok := section.Files["token.json"]
-	if !ok {
-		return nil, errors.New("missing key: token")
+	if len(opsecret.Spec.Secret.Keys) < 1 {
+		return nil, errors.New("no keys defined")
 	}
 
-	tokenData, err := o.client.FileContent(tokenFile)
+	file, ok := section.Files[opsecret.Spec.Secret.Keys[0].From]
+	if !ok {
+		return nil, fmt.Errorf("specified soure file does not exist in section: %s", opsecret.Spec.Secret.Keys[0])
+	}
+
+	tokenData, err := o.client.FileContent(file)
 	if err != nil {
 		return nil, errors.New("missing file content: token.json")
 	}
 
 	dockerConfig := map[string]interface{}{
 		"auths": map[string]map[string]string{
-			registry.Value: {
+			opsecret.Spec.Secret.Keys[0].To: {
 				"username": "_json_key",
 				"password": string(tokenData),
 				"email":    "test@jdd.email",
@@ -219,8 +222,8 @@ func (o operator) getDockerSecret(secretName, secretNamespace string, section on
 	// Create the Secret
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: secretNamespace,
+			Name:      opsecret.Spec.Secret.Name,
+			Namespace: opsecret.Namespace,
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{
