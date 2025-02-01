@@ -234,6 +234,12 @@ func (o operator) getDockerSecret(secretName, secretNamespace string, section on
 }
 
 func isPodUsingSecret(pod *corev1.Pod, secretName string) bool {
+	for _, pullSecret := range pod.Spec.ImagePullSecrets {
+		if pullSecret.Name == secretName {
+			return true
+		}
+	}
+
 	for _, container := range pod.Spec.Containers {
 		// Check envFrom
 		for _, envFrom := range container.EnvFrom {
