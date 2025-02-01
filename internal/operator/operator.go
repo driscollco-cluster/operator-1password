@@ -2,13 +2,14 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	onepassword "github.com/driscollco-cluster/1password"
 	"github.com/driscollco-cluster/operator-1password/internal/conf"
 	"github.com/driscollco-cluster/operator-1password/internal/crds"
 	"github.com/driscollco-core/log"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -65,13 +66,22 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return o.getRequeue(opsecret), nil
 	}
 
-	k8sSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opsecret.Spec.Secret.Name,
-			Namespace: req.Namespace,
-		},
-		Type:       corev1.SecretTypeOpaque,
-		StringData: make(map[string]string),
+	k8sSecret := &corev1.Secret{}
+	switch opsecret.Spec.Secret.SecretType {
+	case "docker":
+		k8sSecret, err = o.getDockerSecret(opsecret.Spec.Secret.Name, req.Namespace, section)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	default:
+		k8sSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      opsecret.Spec.Secret.Name,
+				Namespace: req.Namespace,
+			},
+			Type:       corev1.SecretTypeOpaque,
+			StringData: make(map[string]string),
+		}
 	}
 
 	if err := controllerutil.SetControllerReference(opsecret, k8sSecret, scheme); err != nil {
@@ -82,7 +92,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	// Check if the opsecret already exists
 	existingSecret := &corev1.Secret{}
 	err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && apierrors.IsNotFound(err) {
 		err = k8sClient.Create(ctx, k8sSecret)
 		if err != nil {
 			log.Error("Failed to create secret", "error", err.Error())
@@ -175,6 +185,49 @@ func (o operator) getRequeue(opsecret *crds.OpSecret) ctrl.Result {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}
 	}
 	return ctrl.Result{}
+}
+
+func (o operator) getDockerSecret(secretName, secretNamespace string, section onepassword.Section) (*corev1.Secret, error) {
+	registry, ok := section.Values["registry"]
+	if !ok {
+		return nil, errors.New("missing key: registry")
+	}
+
+	token, ok := section.Values["token"]
+	if !ok {
+		return nil, errors.New("missing key: token")
+	}
+
+	email, ok := section.Values["email"]
+	if !ok {
+		return nil, errors.New("missing key: email")
+	}
+
+	dockerConfig := map[string]interface{}{
+		"auths": map[string]map[string]string{
+			registry.Value: {
+				"username": "_json_key",
+				"password": token.Value,
+				"email":    email.Value,
+			},
+		},
+	}
+	dockerConfigJson, err := json.Marshal(dockerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the Secret
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: secretNamespace,
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": dockerConfigJson,
+		},
+	}, nil
 }
 
 func isPodUsingSecret(pod *corev1.Pod, secretName string) bool {
