@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 )
 
@@ -38,6 +39,9 @@ type operator struct {
 func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error) {
 	opsecret := &crds.OpSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, opsecret); err != nil {
+		if apierrors.IsNotFound(err) {
+			o.log.Info("opsecret has been deleted", "name", req.Name, "namespace", req.Namespace)
+		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
