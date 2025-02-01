@@ -69,7 +69,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	k8sSecret := &corev1.Secret{}
 	switch opsecret.Spec.Secret.SecretType {
 	case "docker":
-		k8sSecret, err = o.getDockerSecret(opsecret.Spec.Secret.Name, req.Namespace, section)
+		k8sSecret, err = o.getDockerSecret(opsecret, section)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
