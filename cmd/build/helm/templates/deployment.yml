@@ -34,4 +34,4 @@ spec:
                   key: token
       imagePullSecrets:
         - name: credentials-gcp-key
-      serviceAccountName: operator-driscollco-1password
+      serviceAccountName: opsecrets-operator
