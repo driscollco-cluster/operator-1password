@@ -2,13 +2,14 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	onepassword "github.com/driscollco-cluster/1password"
 	"github.com/driscollco-cluster/operator-1password/internal/conf"
 	"github.com/driscollco-cluster/operator-1password/internal/crds"
 	"github.com/driscollco-core/log"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,37 +59,46 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 	section, ok := item.Values[opsecret.Spec.Source.Section]
 	if !ok {
-		o.log.Info("section was not found when looking for updates to secret")
+		log.Info("section was not found when looking for updates to secret")
 		return o.getRequeue(opsecret), nil
 	}
 	if !o.updateRequired(opsecret, section) {
 		return o.getRequeue(opsecret), nil
 	}
 
-	k8sSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opsecret.Spec.Secret.Name,
-			Namespace: req.Namespace,
-		},
-		Type:       corev1.SecretTypeOpaque,
-		StringData: make(map[string]string),
+	k8sSecret := &corev1.Secret{}
+	switch opsecret.Spec.Secret.SecretType {
+	case "docker":
+		k8sSecret, err = o.getDockerSecret(opsecret.Spec.Secret.Name, req.Namespace, section)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	default:
+		k8sSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      opsecret.Spec.Secret.Name,
+				Namespace: req.Namespace,
+			},
+			Type:       corev1.SecretTypeOpaque,
+			StringData: make(map[string]string),
+		}
 	}
 
 	if err := controllerutil.SetControllerReference(opsecret, k8sSecret, scheme); err != nil {
-		o.log.Error("error setting owner reference for opsecret", "error", err.Error())
+		log.Error("error setting owner reference for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
 	// Check if the opsecret already exists
 	existingSecret := &corev1.Secret{}
 	err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && apierrors.IsNotFound(err) {
 		err = k8sClient.Create(ctx, k8sSecret)
 		if err != nil {
-			o.log.Error("Failed to create secret", "error", err.Error())
+			log.Error("Failed to create secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
+		log.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
 			"opsecret", opsecret.Name,
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
@@ -103,10 +113,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		existingSecret.StringData = k8sSecret.StringData
 		err = k8sClient.Update(ctx, existingSecret)
 		if err != nil {
-			o.log.Error("failed to update secret", "error", err.Error())
+			log.Error("failed to update secret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
-		o.log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
+		log.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp:   metav1.Now(),
@@ -119,23 +129,23 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		podList := &corev1.PodList{}
 		err = k8sClient.List(ctx, podList, client.InNamespace(req.Namespace))
 		if err != nil {
-			o.log.Error("failed to list pods", "error", err.Error())
+			log.Error("failed to list pods", "error", err.Error())
 			return ctrl.Result{}, err
 		}
 
 		// Iterate over pods and delete those using the opsecret
 		for _, pod := range podList.Items {
 			if isPodUsingSecret(&pod, opsecret.Name) {
-				o.log.Info("Deleting pod using updated opsecret", "pod", pod.Name)
+				log.Info("Deleting pod using updated opsecret", "pod", pod.Name)
 				err = k8sClient.Delete(ctx, &pod)
 				if err != nil {
-					o.log.Error("failed to delete pod", "pod", pod.Name, "error", err.Error())
+					log.Error("failed to delete pod", "pod", pod.Name, "error", err.Error())
 				}
 			}
 		}
 
 	} else {
-		o.log.Error("error checking for existing secret", "error", err.Error())
+		log.Error("error checking for existing secret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -146,7 +156,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	opsecret.Status.LastUpdated = metav1.NewTime(time.Now())
 	err = k8sClient.Status().Update(ctx, opsecret)
 	if err != nil {
-		o.log.Error("failed to update the last updated time for opsecret", "error", err.Error())
+		log.Error("failed to update the last updated time for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -175,6 +185,49 @@ func (o operator) getRequeue(opsecret *crds.OpSecret) ctrl.Result {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}
 	}
 	return ctrl.Result{}
+}
+
+func (o operator) getDockerSecret(secretName, secretNamespace string, section onepassword.Section) (*corev1.Secret, error) {
+	registry, ok := section.Values["registry"]
+	if !ok {
+		return nil, errors.New("missing key: registry")
+	}
+
+	token, ok := section.Values["token"]
+	if !ok {
+		return nil, errors.New("missing key: token")
+	}
+
+	email, ok := section.Values["email"]
+	if !ok {
+		return nil, errors.New("missing key: email")
+	}
+
+	dockerConfig := map[string]interface{}{
+		"auths": map[string]map[string]string{
+			registry.Value: {
+				"username": "_json_key",
+				"password": token.Value,
+				"email":    email.Value,
+			},
+		},
+	}
+	dockerConfigJson, err := json.Marshal(dockerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the Secret
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: secretNamespace,
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": dockerConfigJson,
+		},
+	}, nil
 }
 
 func isPodUsingSecret(pod *corev1.Pod, secretName string) bool {
