@@ -68,7 +68,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 	}
 
-	if opsecret.Status.LastUpdated.Time.Equal(latestUpdate) {
+	if opsecret.Status.LastUpdated.Time.Before(latestUpdate) {
 		return ctrl.Result{}, nil
 	}
 
