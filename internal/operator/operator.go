@@ -36,7 +36,7 @@ type operator struct {
 }
 
 func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error) {
-	opsecret := &crds.OPSecret{}
+	opsecret := &crds.OpSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, opsecret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -92,10 +92,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
-			Timestamp: metav1.Now(),
-			Type:      "create",
-			Reason:    "secret-not-found",
-			Message:   "Secret created to represent data from 1Password",
+			Timestamp:   metav1.Now(),
+			OpTimestamp: metav1.NewTime(latestUpdate),
+			Type:        "create",
+			Message:     "Secret created from 1Password data",
 		})
 	} else if err == nil {
 		// Secret exists, update it
@@ -108,10 +108,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		o.log.Info("Updated kubenetes secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
-			Timestamp: metav1.Now(),
-			Type:      "update",
-			Reason:    "upstream-change",
-			Message:   "secret has been updated to reflect changes from 1Password",
+			Timestamp:   metav1.Now(),
+			OpTimestamp: metav1.NewTime(latestUpdate),
+			Type:        "update",
+			Message:     "secret has been updated to reflect changes in 1Password",
 		})
 
 		// Find pods that reference this opsecret
