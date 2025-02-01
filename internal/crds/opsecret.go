@@ -55,8 +55,10 @@ type SourceConfig struct {
 }
 
 type KeyMapping struct {
+	// From is the name of the key in 1Password (or for Docker, it is the name of the file to read from)
 	From string `json:"from"`
-	To   string `json:"to"`
+	// To is the name of the secret property to populate with the From value; or for Docker it is the name of the container registry hostname
+	To string `json:"to"`
 }
 
 // SecretConfig defines the location within Kubernetes where the secret should be created
