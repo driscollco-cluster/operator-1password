@@ -41,6 +41,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if opsecret.Status.Events == nil {
+		opsecret.Status.Events = []crds.Event{}
+	}
+
 	k8sSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opsecret.Spec.Secret.Name,
@@ -95,10 +99,6 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			return ctrl.Result{}, err
 		}
 		o.log.Info("Updated kubenetes secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace)
-
-		if opsecret.Status.Events == nil {
-			opsecret.Status.Events = []crds.Event{}
-		}
 
 		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 			Timestamp: metav1.Now(),
