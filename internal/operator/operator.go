@@ -38,14 +38,13 @@ type operator struct {
 func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error) {
 	secret := &crds.OPSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, secret); err != nil {
-		o.log.Error("unable to fetch secret resource", "error", err.Error())
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	k8sSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secret.Spec.Secret.Name,
-			Namespace: secret.Spec.Secret.Namespace,
+			Namespace: req.Namespace,
 		},
 		Type:       corev1.SecretTypeOpaque,
 		StringData: make(map[string]string),
