@@ -19,6 +19,14 @@ jobs:
         run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Cache Go Modules and Build Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          retention-days: 400
       - name: Compile Service
         run: cd $buildPath; make build
       - name: Save Binary
