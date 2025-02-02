@@ -10,6 +10,33 @@ on:
       - internal/**
 
 jobs:
+  check-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for forbidden file changes
+        id: file-check
+        run: |
+          # Get the list of changed files between commits
+          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" || true)
+          echo "Changed files: $CHANGED"
+          
+          # Check if any forbidden file/directory is present in the list.
+          if echo "$CHANGED" | grep -q -E '^(go\.mod|go\.sum|internal/)'; then
+            echo "Forbidden file changes detected. Exiting job."
+            # Exiting with a success code (0) to mark the job as skipped.
+            exit 0
+          fi
+          echo "No forbidden file changes detected. Proceeding..."
+
+      - name: Continue with remaining checks
+        run: |
+          echo "Running the rest of the checks..."
+          # Your commands go here
   code-formatting:
     name: Formatting
     runs-on: ubuntu-latest
