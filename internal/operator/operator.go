@@ -82,6 +82,25 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			Type:       corev1.SecretTypeOpaque,
 			StringData: make(map[string]string),
 		}
+
+		for _, key := range opsecret.Spec.Secret.Keys {
+			found, ok := section.Values[key.From]
+			if !ok {
+				foundAsFile, ok := section.Files[key.From]
+				if !ok {
+					o.log.Error("could not find matching key in section", "key", key.From)
+					return ctrl.Result{}, nil
+				}
+				fileContent, err := o.client.FileContent(foundAsFile)
+				if err != nil {
+					o.log.Error("error trying to retrieve contents of file", "file", foundAsFile.Name, "error", err.Error())
+					return ctrl.Result{}, nil
+				}
+				k8sSecret.StringData[key.To] = string(fileContent)
+			} else {
+				k8sSecret.StringData[key.To] = found.Value
+			}
+		}
 	}
 
 	if err := controllerutil.SetControllerReference(opsecret, k8sSecret, scheme); err != nil {

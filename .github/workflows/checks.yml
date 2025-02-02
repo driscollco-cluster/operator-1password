@@ -7,8 +7,6 @@ on:
 
 env:
   codeCoverageMinimum: 0
-  # Define a space-separated list of files/directories to check.
-  # You can extend this list in one place for all jobs.
   CHECK_PATHS: "go.mod go.sum internal/ cmd/main.go"
 
 jobs:
