@@ -19,6 +19,8 @@ jobs:
           git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check for key changes
         id: key-check
         run: |
