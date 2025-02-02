@@ -4,12 +4,13 @@ on:
   push:
     branches-ignore:
       - main
+    paths:
+      - go.mod
+      - go.sum
+      - internal/**
 
 env:
   codeCoverageMinimum: 0
-  # Define a space-separated list of files/directories to check.
-  # You can extend this list in one place for all jobs.
-  CHECK_PATHS: "go.mod go.sum internal/ cmd/main.go"
 
 jobs:
   code-formatting:
@@ -17,192 +18,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set Github Access
-        run: |
-          git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Check for key changes
-        id: key-check
-        run: |
-          # List the changed files between the two commits.
-          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" || true)
-          echo "Changed files: $CHANGED"
-          TRIGGER=false
-          # Loop over each path defined in CHECK_PATHS.
-          for path in $CHECK_PATHS; do
-            if echo "$CHANGED" | grep -q "^$path"; then
-              TRIGGER=true
-              echo "Change detected in $path"
-              break
-            fi
-          done
-          echo "changed=$TRIGGER" >> $GITHUB_OUTPUT
-      - name: Cache Go Modules and Build Cache
-        if: steps.key-check.outputs.changed == 'true'
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Run Formatting Check
-        if: steps.key-check.outputs.changed == 'true'
+      - name: Formatting Check
         run: make check-formatting
-      - name: Skip Formatting Check
-        if: steps.key-check.outputs.changed != 'true'
-        run: echo "No key changes detected; formatting check skipped."
-
   run-go-vet:
     name: Go Vet
     runs-on: ubuntu-latest
     steps:
       - name: Set Github Access
-        run: |
-          git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Check for key changes
-        id: key-check
-        run: |
-          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" || true)
-          echo "Changed files: $CHANGED"
-          TRIGGER=false
-          for path in $CHECK_PATHS; do
-            if echo "$CHANGED" | grep -q "^$path"; then
-              TRIGGER=true
-              echo "Change detected in $path"
-              break
-            fi
-          done
-          echo "changed=$TRIGGER" >> $GITHUB_OUTPUT
-      - name: Cache Go Modules and Build Cache
-        if: steps.key-check.outputs.changed == 'true'
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Run Go Vet
-        if: steps.key-check.outputs.changed == 'true'
+      - name: Go Vet
         run: make govet
-      - name: Skip Go Vet
-        if: steps.key-check.outputs.changed != 'true'
-        run: echo "No key changes detected; Go Vet skipped."
-
   code-linting:
     name: Linting
     runs-on: ubuntu-latest
     steps:
       - name: Set Github Access
-        run: |
-          git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Check for key changes
-        id: key-check
-        run: |
-          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" || true)
-          echo "Changed files: $CHANGED"
-          TRIGGER=false
-          for path in $CHECK_PATHS; do
-            if echo "$CHANGED" | grep -q "^$path"; then
-              TRIGGER=true
-              echo "Change detected in $path"
-              break
-            fi
-          done
-          echo "changed=$TRIGGER" >> $GITHUB_OUTPUT
-      - name: Cache Go Modules and Build Cache
-        if: steps.key-check.outputs.changed == 'true'
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Run Linting
-        if: steps.key-check.outputs.changed == 'true'
+      - name: Linting
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60
           args: --timeout=30m
-      - name: Skip Linting
-        if: steps.key-check.outputs.changed != 'true'
-        run: echo "No key changes detected; linting skipped."
-
   test-coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Set Github Access
-        run: |
-          git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Check for key changes
-        id: key-check
-        run: |
-          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" || true)
-          echo "Changed files: $CHANGED"
-          TRIGGER=false
-          for path in $CHECK_PATHS; do
-            if echo "$CHANGED" | grep -q "^$path"; then
-              TRIGGER=true
-              echo "Change detected in $path"
-              break
-            fi
-          done
-          echo "changed=$TRIGGER" >> $GITHUB_OUTPUT
-      - name: Cache Go Modules and Build Cache
-        if: steps.key-check.outputs.changed == 'true'
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Run Test Coverage
-        if: steps.key-check.outputs.changed == 'true'
+      - name: Test Coverage
         run: make coverage
-      - name: Skip Test Coverage
-        if: steps.key-check.outputs.changed != 'true'
-        run: echo "No key changes detected; test coverage skipped."
-
   run-go-unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Set Github Access
-        run: |
-          git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        run: git config --global url."https://${{ secrets.GH_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Check for key changes
-        id: key-check
-        run: |
-          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" || true)
-          echo "Changed files: $CHANGED"
-          TRIGGER=false
-          for path in $CHECK_PATHS; do
-            if echo "$CHANGED" | grep -q "^$path"; then
-              TRIGGER=true
-              echo "Change detected in $path"
-              break
-            fi
-          done
-          echo "changed=$TRIGGER" >> $GITHUB_OUTPUT
-      - name: Cache Go Modules and Build Cache
-        if: steps.key-check.outputs.changed == 'true'
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Run Unit Tests
-        if: steps.key-check.outputs.changed == 'true'
+      - name: Unit Tests
         run: make test
-      - name: Skip Unit Tests
-        if: steps.key-check.outputs.changed != 'true'
-        run: echo "No key changes detected; unit tests skipped."
