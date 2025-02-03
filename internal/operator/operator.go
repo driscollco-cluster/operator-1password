@@ -21,6 +21,10 @@ import (
 	"time"
 )
 
+const (
+	finalizer = "opsecrets.crds.driscoll.co"
+)
+
 type Operator interface {
 	Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error)
 }
@@ -45,7 +49,30 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	theLog := o.log.Child("source.vault", opsecret.Spec.Source.Vault, "source.item", opsecret.Spec.Source.Item, "source.section", opsecret.Spec.Source.Section)
+	theLog := o.log.Child("source.vault", opsecret.Spec.Source.Vault, "source.item", opsecret.Spec.Source.Item,
+		"source.section", opsecret.Spec.Source.Section, "opsecret.name", req.Name, "opsecret.namespace", req.Namespace)
+
+	if !opsecret.ObjectMeta.DeletionTimestamp.IsZero() {
+		if controllerutil.ContainsFinalizer(opsecret, finalizer) {
+			theLog.Info("opsecret is deleting")
+			controllerutil.RemoveFinalizer(opsecret, finalizer)
+			if err := k8sClient.Update(ctx, opsecret); err != nil {
+				theLog.Error("error removing finalizer for opsecret", "error", err.Error())
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if !controllerutil.ContainsFinalizer(opsecret, finalizer) {
+		controllerutil.AddFinalizer(opsecret, finalizer)
+		if err := k8sClient.Update(ctx, opsecret); err != nil {
+			theLog.Error("error setting finalizer for opsecret", "error", err.Error())
+			return ctrl.Result{}, err
+		}
+		return o.getRequeue(opsecret), nil
+	}
 
 	if opsecret.Status.Events == nil {
 		opsecret.Status.Events = []crds.Event{}
