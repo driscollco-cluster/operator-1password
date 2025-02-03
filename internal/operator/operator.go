@@ -44,9 +44,6 @@ type operator struct {
 func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient client.Client, recorder record.EventRecorder, scheme *runtime.Scheme) (ctrl.Result, error) {
 	opsecret := &crds.OpSecret{}
 	if err := k8sClient.Get(ctx, req.NamespacedName, opsecret); err != nil {
-		if apierrors.IsNotFound(err) {
-			o.log.Info("opsecret has been deleted", "name", req.Name, "namespace", req.Namespace)
-		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	theLog := o.log.Child("source.vault", opsecret.Spec.Source.Vault, "source.item", opsecret.Spec.Source.Item,
