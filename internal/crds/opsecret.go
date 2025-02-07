@@ -65,6 +65,8 @@ type KeyMapping struct {
 type SecretConfig struct {
 	// The name of the secret
 	Name string `json:"name"`
+	// Deploy the opsecret to these namespaces
+	Namespaces []string `json:"namespaces"`
 	// Check this secret every N seconds in 1Password and update the secret if anything changes
 	RefreshSeconds int `json:"refresh-seconds"`
 	// +kubebuilder:validation:Enum=basic;docker
