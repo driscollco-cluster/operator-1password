@@ -33,5 +33,5 @@ spec:
                   name: onepassword-api
                   key: token
       imagePullSecrets:
-        - name: credentials-gcp-key
+        - name: docker-gcp-driscollco-test
       serviceAccountName: opsecrets-operator
