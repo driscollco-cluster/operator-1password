@@ -15,7 +15,7 @@ service:
     host:
       - cluster.jdd.me.uk
       - mac-studio
-    path: /operators/onepass
+    path: /operators/opsecrets
     port: 80
   dependencies:
     onepassword:
