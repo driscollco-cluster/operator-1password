@@ -52,6 +52,21 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	if !opsecret.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(opsecret, finalizer) {
 			theLog.Info("opsecret is deleting")
+			for _, namespace := range opsecret.Spec.Secret.Namespaces {
+				childSecret := &corev1.Secret{}
+				secretKey := types.NamespacedName{
+					Name:      opsecret.Spec.Secret.Name,
+					Namespace: namespace,
+				}
+				if err := k8sClient.Get(ctx, secretKey, childSecret); err != nil {
+					theLog.Error("unable to fetch child secret", "name", opsecret.Spec.Secret.Name, "namespace", namespace, "error", err.Error())
+					continue
+				}
+				if err := k8sClient.Delete(ctx, childSecret); err != nil {
+					theLog.Error("error deleting child secret", "name", opsecret.Spec.Secret.Name, "namespace", namespace, "error", err.Error())
+					continue
+				}
+			}
 			controllerutil.RemoveFinalizer(opsecret, finalizer)
 			if err := k8sClient.Update(ctx, opsecret); err != nil {
 				theLog.Error("error removing finalizer for opsecret", "error", err.Error())
@@ -100,8 +115,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	default:
 		k8sSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      opsecret.Spec.Secret.Name,
-				Namespace: req.Namespace,
+				Name: opsecret.Spec.Secret.Name,
 			},
 			Type:       corev1.SecretTypeOpaque,
 			StringData: make(map[string]string),
@@ -127,68 +141,66 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 	}
 
-	if err := controllerutil.SetControllerReference(opsecret, k8sSecret, scheme); err != nil {
-		theLog.Error("error setting owner reference for opsecret", "error", err.Error())
-		return ctrl.Result{}, err
-	}
-
 	// Check if the opsecret already exists
-	existingSecret := &corev1.Secret{}
-	err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: k8sSecret.Namespace}, existingSecret)
-	if err != nil && apierrors.IsNotFound(err) {
-		err = k8sClient.Create(ctx, k8sSecret)
-		if err != nil {
-			theLog.Error("Failed to create secret", "error", err.Error())
-			return ctrl.Result{}, err
-		}
-		theLog.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
-			"opsecret", opsecret.Name,
-			"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
+	for _, namespace := range opsecret.Spec.Secret.Namespaces {
+		k8sSecret.Namespace = namespace
+		existingSecret := &corev1.Secret{}
+		err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: namespace}, existingSecret)
+		if err != nil && apierrors.IsNotFound(err) {
+			err = k8sClient.Create(ctx, k8sSecret)
+			if err != nil {
+				theLog.Error("Failed to create secret", "error", err.Error())
+				return ctrl.Result{}, err
+			}
+			theLog.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
+				"opsecret", opsecret.Name,
+				"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
-		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
-			Timestamp:   metav1.Now(),
-			OpTimestamp: metav1.NewTime(section.LastUpdated),
-			Type:        "create",
-			Message:     "Secret created from 1Password data",
-		})
-	} else if err == nil {
-		// Secret exists, update it
-		existingSecret.StringData = k8sSecret.StringData
-		err = k8sClient.Update(ctx, existingSecret)
-		if err != nil {
-			theLog.Error("failed to update secret", "error", err.Error())
-			return ctrl.Result{}, err
-		}
-		theLog.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
+			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
+				Timestamp:   metav1.Now(),
+				OpTimestamp: metav1.NewTime(section.LastUpdated),
+				Type:        "create",
+				Message:     "Secret created from 1Password data",
+			})
+		} else if err == nil {
+			// Secret exists, update it
+			existingSecret.StringData = k8sSecret.StringData
+			err = k8sClient.Update(ctx, existingSecret)
+			if err != nil {
+				theLog.Error("failed to update secret", "error", err.Error())
+				return ctrl.Result{}, err
+			}
+			theLog.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
 
-		opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
-			Timestamp:   metav1.Now(),
-			OpTimestamp: metav1.NewTime(section.LastUpdated),
-			Type:        "update",
-			Message:     "secret has been updated to reflect changes in 1Password",
-		})
+			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
+				Timestamp:   metav1.Now(),
+				OpTimestamp: metav1.NewTime(section.LastUpdated),
+				Type:        "update",
+				Message:     "secret has been updated to reflect changes in 1Password",
+			})
 
-		// Find pods that reference this opsecret
-		podList := &corev1.PodList{}
-		err = k8sClient.List(ctx, podList, client.InNamespace(req.Namespace))
-		if err != nil {
-			theLog.Error("failed to list pods", "error", err.Error())
-			return ctrl.Result{}, err
-		}
+			// Find pods that reference this opsecret
+			podList := &corev1.PodList{}
+			err = k8sClient.List(ctx, podList, client.InNamespace(req.Namespace))
+			if err != nil {
+				theLog.Error("failed to list pods", "error", err.Error())
+				return ctrl.Result{}, err
+			}
 
-		// Iterate over pods and delete those using the opsecret
-		for _, pod := range podList.Items {
-			if isPodUsingSecret(&pod, opsecret.Spec.Secret.Name) {
-				err = k8sClient.Delete(ctx, &pod)
-				if err != nil {
-					theLog.Error("failed to delete pod", "pod", pod.Name, "error", err.Error())
+			// Iterate over pods and delete those using the opsecret
+			for _, pod := range podList.Items {
+				if isPodUsingSecret(&pod, opsecret.Spec.Secret.Name) {
+					err = k8sClient.Delete(ctx, &pod)
+					if err != nil {
+						theLog.Error("failed to delete pod", "pod", pod.Name, "error", err.Error())
+					}
 				}
 			}
-		}
 
-	} else {
-		theLog.Error("error checking for existing secret", "error", err.Error())
-		return ctrl.Result{}, err
+		} else {
+			theLog.Error("error checking for existing secret", "error", err.Error())
+			return ctrl.Result{}, err
+		}
 	}
 
 	if opsecret.Status.Events == nil {
@@ -265,8 +277,7 @@ func (o operator) getDockerSecret(opsecret *crds.OpSecret, section onepassword.S
 	// Create the Secret
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opsecret.Spec.Secret.Name,
-			Namespace: opsecret.Namespace,
+			Name: opsecret.Spec.Secret.Name,
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{
