@@ -31,4 +31,5 @@ behaviours:
 Log:
   Level: info
   BetterStack:
-    SourceKey: BcmwQYzVHfJjejqMwbCzpX9y
+    Hostname: https://s1197795.eu-nbg-2.betterstackdata.com
+    SourceKey: WALNE53Tv96Dbyh3U5EGTKws
