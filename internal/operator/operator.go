@@ -49,8 +49,8 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	}
 	theLog := o.log.Child(
 		"secret.source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section),
-		"secret.location", fmt.Sprintf("%s/%s", opsecret.Spec.Secret.Name, strings.Join(opsecret.Spec.Secret.Namespaces, ",")),
-		"opsecret.location", fmt.Sprintf("%s/%s", req.Name, req.Namespace))
+		"secret.location", fmt.Sprintf("%s/%s", strings.Join(opsecret.Spec.Secret.Namespaces, ","), opsecret.Spec.Secret.Name),
+		"opsecret.location", fmt.Sprintf("%s/%s", req.Namespace, req.Name))
 
 	if !opsecret.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(opsecret, finalizer) {
