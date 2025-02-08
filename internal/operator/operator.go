@@ -54,7 +54,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 	if !opsecret.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(opsecret, finalizer) {
-			theLog.Info("opsecret is deleting")
+			theLog.Info(fmt.Sprintf("opsecret %s/%s is deleting", opsecret.Namespace, opsecret.Name))
 			for _, namespace := range opsecret.Spec.Secret.Namespaces {
 				childSecret := &corev1.Secret{}
 				secretKey := types.NamespacedName{
@@ -156,7 +156,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			err = k8sClient.Create(ctx, k8sSecret)
 			if err != nil {
 				if err.Error() != errorToSuppress {
-					theLog.Error("Failed to create secret", "error", err.Error(),
+					theLog.Error(fmt.Sprintf("failed to create secret %s/%s", namespace, opsecret.Spec.Secret.Name), "error", err.Error(),
 						"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 				}
 				return ctrl.Result{}, err
@@ -180,7 +180,8 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 				return ctrl.Result{}, err
 			}
-			theLog.Info("updated secret", "secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
+			theLog.Info(fmt.Sprintf("updated secret %s/%s", namespace, opsecret.Spec.Secret.Name),
+				"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
@@ -205,6 +206,9 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 					if err != nil {
 						theLog.Error("failed to delete pod", "pod", pod.Name, "error", err.Error(),
 							"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
+					} else {
+						theLog.Info(fmt.Sprintf("deleted pod %s/%s because secret changed", pod.Namespace, pod.Name),
+							"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 					}
 				}
 			}
