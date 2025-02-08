@@ -23,6 +23,8 @@ spec:
           env:
             - name: Log_Level
               value: {{ .Values.Log.Level }}
+            - name: Log_BetterStack_SourceKey
+              value: {{ .Values.Log.BetterStack.SourceKey }}
             - name: OnePassword_Api_Url
               value: {{ .Values.service.dependencies.onepassword.path }}
             - name: Secrets_Refresh_MinIntervalSeconds
