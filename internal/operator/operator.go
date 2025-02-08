@@ -176,7 +176,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				return ctrl.Result{}, err
 			}
 			for _, deletedPod := range deleted {
-				theLog.Info("deleted a pod because a secret has been created", "pod", deletedPod)
+				theLog.Info("deleted a dependent pod because a new version of a secret has been created", "pod", deletedPod)
 			}
 		} else if err == nil {
 			if reflect.DeepEqual(existingSecret.StringData, k8sSecret.StringData) {
@@ -205,7 +205,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				return ctrl.Result{}, err
 			}
 			for _, deletedPod := range deleted {
-				theLog.Info("deleted a pod because a secret changed", "pod", deletedPod)
+				theLog.Info("deleted a dependent pod because a secret changed", "pod", deletedPod)
 			}
 		} else {
 			theLog.Error("error checking for existing secret", "error", err.Error(),
