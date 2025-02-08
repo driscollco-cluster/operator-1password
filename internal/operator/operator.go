@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -165,7 +166,9 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				Message:     "Secret created from 1Password data",
 			})
 		} else if err == nil {
-			// Secret exists, update it
+			if reflect.DeepEqual(existingSecret.StringData, k8sSecret.StringData) {
+				continue
+			}
 			existingSecret.StringData = k8sSecret.StringData
 			err = k8sClient.Update(ctx, existingSecret)
 			if err != nil {
