@@ -207,8 +207,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 						theLog.Error("failed to delete pod", "pod", pod.Name, "error", err.Error(),
 							"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 					} else {
-						theLog.Info(fmt.Sprintf("deleted pod %s/%s because secret changed", pod.Namespace, pod.Name),
-							"pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+						theLog.Info("deleted pod because secret changed", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 					}
 				}
 			}
