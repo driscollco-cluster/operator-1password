@@ -172,11 +172,13 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 			deleted, err := o.deleteDependentPods(ctx, opsecret, k8sClient)
 			if err != nil {
-				theLog.Error("error deleting dependent pods", "error", err.Error())
+				theLog.Error("error deleting dependent pods", "error", err.Error(),
+					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 				return ctrl.Result{}, err
 			}
 			for _, deletedPod := range deleted {
-				theLog.Info("deleted a dependent pod because a new version of a secret has been created", "pod", deletedPod)
+				theLog.Info("deleted a dependent pod because a new version of a secret has been created", "pod", deletedPod,
+					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 			}
 		} else if err == nil {
 			if reflect.DeepEqual(existingSecret.StringData, k8sSecret.StringData) {
@@ -205,7 +207,8 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				return ctrl.Result{}, err
 			}
 			for _, deletedPod := range deleted {
-				theLog.Info("deleted a dependent pod because a secret changed", "pod", deletedPod)
+				theLog.Info("deleted a dependent pod because a secret changed", "pod", deletedPod,
+					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 			}
 		} else {
 			theLog.Error("error checking for existing secret", "error", err.Error(),
