@@ -18,6 +18,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 	"time"
 )
 
@@ -46,8 +47,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	if err := k8sClient.Get(ctx, req.NamespacedName, opsecret); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	theLog := o.log.Child("source.vault", opsecret.Spec.Source.Vault, "source.item", opsecret.Spec.Source.Item,
-		"source.section", opsecret.Spec.Source.Section, "opsecret.name", req.Name, "opsecret.namespace", req.Namespace)
+	theLog := o.log.Child(
+		"secret.source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section),
+		"secret.location", fmt.Sprintf("%s/%s", opsecret.Spec.Secret.Name, strings.Join(opsecret.Spec.Secret.Namespaces, ",")),
+		"opsecret.location", fmt.Sprintf("%s/%s", req.Name, req.Namespace))
 
 	if !opsecret.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(opsecret, finalizer) {
@@ -59,11 +62,11 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 					Namespace: namespace,
 				}
 				if err := k8sClient.Get(ctx, secretKey, childSecret); err != nil {
-					theLog.Error("unable to fetch child secret", "secret.name", opsecret.Spec.Secret.Name, "secret.namespace", namespace, "error", err.Error())
+					theLog.Error("unable to fetch child secret", "error", err.Error())
 					continue
 				}
 				if err := k8sClient.Delete(ctx, childSecret); err != nil {
-					theLog.Error("error deleting child secret", "secret.name", opsecret.Spec.Secret.Name, "secret.namespace", namespace, "error", err.Error())
+					theLog.Error("error deleting child secret", "error", err.Error())
 					continue
 				}
 			}
@@ -152,8 +155,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				theLog.Error("Failed to create secret", "error", err.Error())
 				return ctrl.Result{}, err
 			}
-			theLog.Info("created new secret", "secret.name", k8sSecret.Name, "secret.namespace", k8sSecret.Namespace,
-				"secret.source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
+			theLog.Info("created new secret")
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
@@ -169,7 +171,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				theLog.Error("failed to update secret", "error", err.Error())
 				return ctrl.Result{}, err
 			}
-			theLog.Info("updated secret", "secret.name", k8sSecret.Name, "secret.namespace", k8sSecret.Namespace)
+			theLog.Info("updated secret")
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
