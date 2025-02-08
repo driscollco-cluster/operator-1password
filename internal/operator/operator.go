@@ -79,7 +79,8 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			}
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, nil
+		theLog.Info("opsecret has deletion timestamp but does not have a finaliser")
+		return o.getRequeue(opsecret), nil
 	}
 
 	if !controllerutil.ContainsFinalizer(opsecret, finalizer) {
