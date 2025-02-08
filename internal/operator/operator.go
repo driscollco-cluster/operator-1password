@@ -90,6 +90,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			theLog.Error("error setting finalizer for opsecret", "error", err.Error())
 			return ctrl.Result{}, err
 		}
+		theLog.Info(fmt.Sprintf("created opsecret : %s/%s", opsecret.Namespace, opsecret.Name))
 		return o.getRequeue(opsecret), nil
 	}
 
