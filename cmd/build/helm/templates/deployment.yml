@@ -21,10 +21,14 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port }}
           env:
+            - name: LOG_LEVEL
+              value: {{ .Values.Log.Level }}
             - name: Log_Level
               value: {{ .Values.Log.Level }}
             - name: Log_BetterStack_SourceKey
               value: {{ .Values.Log.BetterStack.SourceKey }}
+            - name: Log_BetterStack_Hostname
+              value: {{ .Values.Log.BetterStack.Hostname }}
             - name: OnePassword_Api_Url
               value: {{ .Values.service.dependencies.onepassword.path }}
             - name: Secrets_Refresh_MinIntervalSeconds

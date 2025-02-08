@@ -191,7 +191,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 			// Find pods that reference this opsecret
 			podList := &corev1.PodList{}
-			err = k8sClient.List(ctx, podList, client.InNamespace(req.Namespace))
+			err = k8sClient.List(ctx, podList)
 			if err != nil {
 				theLog.Error("failed to list pods", "error", err.Error(),
 					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
