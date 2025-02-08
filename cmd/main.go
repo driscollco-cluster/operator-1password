@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	s := service.New("Onepass Secrets Operator")
+	s := service.New("operator-opsecrets")
 
 	if err := s.Config().Populate(&conf.Config); err != nil {
 		s.Log().Error("unable to populate config", "error", err.Error())
@@ -21,7 +21,7 @@ func main() {
 
 	go func() {
 		log.SetLogger(logr.Discard())
-		actualOp := operator.New(s.Log().Child("operator", "operator-opsecrets"))
+		actualOp := operator.New(s.Log())
 		op := operatorLib.New("operator-opsecrets", actualOp.Reconcile)
 		if err := op.Start("crds.driscoll.co", "v1", &crds.OpSecret{}, &crds.OpSecretList{}); err != nil {
 			s.Log().Error("unable to start the operator", "error", err.Error())
