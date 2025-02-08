@@ -59,11 +59,11 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 					Namespace: namespace,
 				}
 				if err := k8sClient.Get(ctx, secretKey, childSecret); err != nil {
-					theLog.Error("unable to fetch child secret", "name", opsecret.Spec.Secret.Name, "namespace", namespace, "error", err.Error())
+					theLog.Error("unable to fetch child secret", "secret.name", opsecret.Spec.Secret.Name, "secret.namespace", namespace, "error", err.Error())
 					continue
 				}
 				if err := k8sClient.Delete(ctx, childSecret); err != nil {
-					theLog.Error("error deleting child secret", "name", opsecret.Spec.Secret.Name, "namespace", namespace, "error", err.Error())
+					theLog.Error("error deleting child secret", "secret.name", opsecret.Spec.Secret.Name, "secret.namespace", namespace, "error", err.Error())
 					continue
 				}
 			}
@@ -152,9 +152,8 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				theLog.Error("Failed to create secret", "error", err.Error())
 				return ctrl.Result{}, err
 			}
-			theLog.Info("created new secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace,
-				"opsecret", opsecret.Name,
-				"source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
+			theLog.Info("created new secret", "secret.name", k8sSecret.Name, "secret.namespace", k8sSecret.Namespace,
+				"secret.source", fmt.Sprintf("%s/%s/%s", opsecret.Spec.Source.Vault, opsecret.Spec.Source.Item, opsecret.Spec.Source.Section))
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
@@ -170,7 +169,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				theLog.Error("failed to update secret", "error", err.Error())
 				return ctrl.Result{}, err
 			}
-			theLog.Info("updated secret", "name", k8sSecret.Name, "namespace", k8sSecret.Namespace, "opsecret", opsecret.Name)
+			theLog.Info("updated secret", "secret.name", k8sSecret.Name, "secret.namespace", k8sSecret.Namespace)
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
