@@ -29,7 +29,7 @@ behaviours:
       intervalMinSeconds: 30
 
 Log:
-  Level: info
+  Level: INFO
   BetterStack:
     Hostname: https://s1197795.eu-nbg-2.betterstackdata.com
     SourceKey: WALNE53Tv96Dbyh3U5EGTKws
