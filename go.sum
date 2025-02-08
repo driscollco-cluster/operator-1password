@@ -79,12 +79,12 @@ github.com/driscollco-core/jwt v1.0.3 h1:scVIydHVMpxUfEillzTxcP2ljOmMEmYaNJc9mxk
 github.com/driscollco-core/jwt v1.0.3/go.mod h1:+4frCtJjrlle5YePKfaBa5uFT4Sufetgi1hh2git71k=
 github.com/driscollco-core/kubernetes-operator v1.0.6 h1:fkPE8RRiFyvAduSMtJ7Uu9QBNHTRNcgiWtAiRo7zzoo=
 github.com/driscollco-core/kubernetes-operator v1.0.6/go.mod h1:xrvEL0mHTvwxkJ9TgNQtHtXYSF92J5rIeAd9vlN5AlY=
-github.com/driscollco-core/log v1.0.13 h1:4EyG4TlWdiV4rVgXO+rtE22WQLBOxGbY2/pf5tYSn4g=
-github.com/driscollco-core/log v1.0.13/go.mod h1:CYyTE0eOvPpui0czptTr//6cMeWTFH6FS2qwh/SE2+Y=
+github.com/driscollco-core/log v1.0.14 h1:yyTd0a+S83Q/eMH7lHZkY6SULIoNBScvueh9BGUvTio=
+github.com/driscollco-core/log v1.0.14/go.mod h1:CYyTE0eOvPpui0czptTr//6cMeWTFH6FS2qwh/SE2+Y=
 github.com/driscollco-core/process-group v1.0.20 h1:dqdAVILG7yq4EJl/dQHfaRv5wlp1I1ZLLEvSS/g5fak=
 github.com/driscollco-core/process-group v1.0.20/go.mod h1:gTJuHPSY8Dk44udYRGEF0UDSrGVwsKgKLmxMaQS9x4Q=
-github.com/driscollco-core/service v1.0.30 h1:h6NcMQ5jTC1Wdi2ImuSWumijH1WZPu45H3lRwX8Pvxk=
-github.com/driscollco-core/service v1.0.30/go.mod h1:YhxdVADWsLVA3kgNB6rrvIHJx5UwaNQmkEOrC/jyAJQ=
+github.com/driscollco-core/service v1.0.31 h1:e4hXb5ldli+ongC/4STmhjrrqoKo7hT6itPhJ92m6Uo=
+github.com/driscollco-core/service v1.0.31/go.mod h1:ucr9orAtqAWadLuLQk0UlzJeWstQ1D4xmPqMFClT+Xs=
 github.com/driscollcode/tls-self-sign v0.0.0-20220205113746-ef221872e471 h1:HhERmDKryB97NV1NCT7IKojNrt2TPQJLEFy+XMK9l4E=
 github.com/driscollcode/tls-self-sign v0.0.0-20220205113746-ef221872e471/go.mod h1:I9/R3HeTTmh8PUojPqwnib3PaNWIpyQCiBa2SFqUoiM=
 github.com/driscollos/config v1.5.5 h1:lPBTHcYsDShXZdelQGMXhcmayyZ5Sus3FUORu6TkUMo=

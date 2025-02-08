@@ -10,8 +10,8 @@ require (
 	github.com/driscollco-core/firestore v1.0.9
 	github.com/driscollco-core/http-router v1.0.34
 	github.com/driscollco-core/kubernetes-operator v1.0.6
-	github.com/driscollco-core/log v1.0.13
-	github.com/driscollco-core/service v1.0.30
+	github.com/driscollco-core/log v1.0.14
+	github.com/driscollco-core/service v1.0.31
 	github.com/go-logr/logr v1.4.2
 	go.uber.org/mock v0.5.0
 	k8s.io/api v0.32.0
