@@ -71,6 +71,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 						"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 					continue
 				}
+				theLog.Info(fmt.Sprintf("deleted secret : %s/%s", namespace, opsecret.Spec.Secret.Name))
 			}
 			controllerutil.RemoveFinalizer(opsecret, finalizer)
 			if err := k8sClient.Update(ctx, opsecret); err != nil {
