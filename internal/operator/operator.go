@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	finalizer = "opsecrets.crds.driscoll.co"
+	finalizer       = "opsecrets.crds.driscoll.co"
+	errorToSuppress = "resourceVersion should not be set on objects to be created"
 )
 
 type Operator interface {
@@ -153,8 +154,10 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		if err != nil && apierrors.IsNotFound(err) {
 			err = k8sClient.Create(ctx, k8sSecret)
 			if err != nil {
-				theLog.Error("Failed to create secret", "error", err.Error(),
-					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
+				if err.Error() != errorToSuppress {
+					theLog.Error("Failed to create secret", "error", err.Error(),
+						"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
+				}
 				return ctrl.Result{}, err
 			}
 			theLog.Info("created new secret", "secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
