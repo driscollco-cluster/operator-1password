@@ -250,7 +250,7 @@ func (o operator) getRequeue(opsecret *crds.OpSecret) ctrl.Result {
 	if opsecret.Spec.Secret.RefreshSeconds >= conf.Config.Secrets.Refresh.MinIntervalSeconds {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(opsecret.Spec.Secret.RefreshSeconds)}
 	}
-	return ctrl.Result{}
+	return ctrl.Result{RequeueAfter: time.Second * time.Duration(conf.Config.Secrets.Refresh.MinIntervalSeconds)}
 }
 
 func (o operator) getDockerSecret(opsecret *crds.OpSecret, section onepassword.Section) (*corev1.Secret, error) {
