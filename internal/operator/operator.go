@@ -60,11 +60,13 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 					Namespace: namespace,
 				}
 				if err := k8sClient.Get(ctx, secretKey, childSecret); err != nil {
-					theLog.Error("unable to fetch child secret", "error", err.Error())
+					theLog.Error("unable to fetch child secret", "error", err.Error(),
+						"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 					continue
 				}
 				if err := k8sClient.Delete(ctx, childSecret); err != nil {
-					theLog.Error("error deleting child secret", "error", err.Error())
+					theLog.Error("error deleting child secret", "error", err.Error(),
+						"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 					continue
 				}
 			}
