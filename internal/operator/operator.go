@@ -169,6 +169,15 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				Type:        "create",
 				Message:     "Secret created from 1Password data",
 			})
+
+			deleted, err := o.deleteDependentPods(ctx, opsecret, k8sClient)
+			if err != nil {
+				theLog.Error("error deleting dependent pods", "error", err.Error())
+				return ctrl.Result{}, err
+			}
+			for _, deletedPod := range deleted {
+				theLog.Info("deleted a pod because a secret has been created", "pod", deletedPod)
+			}
 		} else if err == nil {
 			if reflect.DeepEqual(existingSecret.StringData, k8sSecret.StringData) {
 				continue
@@ -190,28 +199,14 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				Message:     "secret has been updated to reflect changes in 1Password",
 			})
 
-			// Find pods that reference this opsecret
-			podList := &corev1.PodList{}
-			err = k8sClient.List(ctx, podList)
+			deleted, err := o.deleteDependentPods(ctx, opsecret, k8sClient)
 			if err != nil {
-				theLog.Error("failed to list pods", "error", err.Error(),
-					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
+				theLog.Error("error deleting dependent pods", "error", err.Error())
 				return ctrl.Result{}, err
 			}
-
-			// Iterate over pods and delete those using the opsecret
-			for _, pod := range podList.Items {
-				if isPodUsingSecret(&pod, opsecret.Spec.Secret.Name) {
-					err = k8sClient.Delete(ctx, &pod)
-					if err != nil {
-						theLog.Error("failed to delete pod", "pod", pod.Name, "error", err.Error(),
-							"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
-					} else {
-						theLog.Info("deleted pod because secret changed", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
-					}
-				}
+			for _, deletedPod := range deleted {
+				theLog.Info("deleted a pod because a secret changed", "pod", deletedPod)
 			}
-
 		} else {
 			theLog.Error("error checking for existing secret", "error", err.Error(),
 				"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
@@ -231,6 +226,27 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 	}
 
 	return o.getRequeue(opsecret), nil
+}
+
+func (o operator) deleteDependentPods(ctx context.Context, opsecret *crds.OpSecret, k8sClient client.Client) ([]string, error) {
+	podList := &corev1.PodList{}
+	err := k8sClient.List(ctx, podList)
+	if err != nil {
+		return nil, fmt.Errorf("could not list pods : %w", err)
+	}
+
+	deletedPods := make([]string, 0)
+	for _, pod := range podList.Items {
+		if isPodUsingSecret(&pod, opsecret.Spec.Secret.Name) {
+			err = k8sClient.Delete(ctx, &pod)
+			if err != nil {
+				return nil, fmt.Errorf("could not delete pod : %w", err)
+			} else {
+				deletedPods = append(deletedPods, fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+			}
+		}
+	}
+	return deletedPods, nil
 }
 
 func (o operator) updateRequired(opsecret *crds.OpSecret, section onepassword.Section) bool {
