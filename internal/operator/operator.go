@@ -54,7 +54,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 
 	if !opsecret.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(opsecret, finalizer) {
-			theLog.Info(fmt.Sprintf("opsecret %s/%s is deleting", opsecret.Namespace, opsecret.Name))
+			theLog.Info(fmt.Sprintf("deleted opsecret : %s/%s", opsecret.Namespace, opsecret.Name))
 			for _, namespace := range opsecret.Spec.Secret.Namespaces {
 				childSecret := &corev1.Secret{}
 				secretKey := types.NamespacedName{
@@ -156,12 +156,12 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			err = k8sClient.Create(ctx, k8sSecret)
 			if err != nil {
 				if err.Error() != errorToSuppress {
-					theLog.Error(fmt.Sprintf("failed to create secret %s/%s", namespace, opsecret.Spec.Secret.Name), "error", err.Error(),
+					theLog.Error(fmt.Sprintf("error creating secret : %s/%s", namespace, opsecret.Spec.Secret.Name), "error", err.Error(),
 						"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 				}
 				return ctrl.Result{}, err
 			}
-			theLog.Info(fmt.Sprintf("created a new secret - %s/%s", namespace, opsecret.Spec.Secret.Name),
+			theLog.Info(fmt.Sprintf("created secret : %s/%s", namespace, opsecret.Spec.Secret.Name),
 				"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
@@ -178,7 +178,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				return ctrl.Result{}, err
 			}
 			for _, deletedPod := range deleted {
-				theLog.Info("deleted a dependent pod because a new version of a secret has been created", "pod", deletedPod,
+				theLog.Info("deleted pod due to secret creation", "pod", deletedPod,
 					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 			}
 		} else if err == nil {
@@ -192,7 +192,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 				return ctrl.Result{}, err
 			}
-			theLog.Info(fmt.Sprintf("updated a secret - %s/%s", namespace, opsecret.Spec.Secret.Name),
+			theLog.Info(fmt.Sprintf("updated secret : %s/%s", namespace, opsecret.Spec.Secret.Name),
 				"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
@@ -208,7 +208,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 				return ctrl.Result{}, err
 			}
 			for _, deletedPod := range deleted {
-				theLog.Info("deleted a dependent pod because a secret changed", "pod", deletedPod,
+				theLog.Info("deleted pod due to secret update", "pod", deletedPod,
 					"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 			}
 		} else {
