@@ -19,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 	"time"
 )
 
@@ -166,6 +167,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			theLog.Info(fmt.Sprintf("created secret : %s/%s", namespace, opsecret.Spec.Secret.Name),
 				"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 
+			o.addSecretToStatus(opsecret, k8sSecret)
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
 				OpTimestamp: metav1.NewTime(section.LastUpdated),
@@ -185,6 +187,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			}
 		} else if err == nil {
 			if reflect.DeepEqual(existingSecret.StringData, k8sSecret.StringData) {
+				o.addSecretToStatus(opsecret, k8sSecret)
 				continue
 			}
 			existingSecret.StringData = k8sSecret.StringData
@@ -197,6 +200,7 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 			theLog.Info(fmt.Sprintf("updated secret : %s/%s", namespace, opsecret.Spec.Secret.Name),
 				"secret.location", fmt.Sprintf("%s/%s", namespace, opsecret.Spec.Secret.Name))
 
+			o.addSecretToStatus(opsecret, k8sSecret)
 			opsecret.Status.Events = append(opsecret.Status.Events, crds.Event{
 				Timestamp:   metav1.Now(),
 				OpTimestamp: metav1.NewTime(section.LastUpdated),
@@ -220,18 +224,76 @@ func (o operator) Reconcile(ctx context.Context, req ctrl.Request, k8sClient cli
 		}
 	}
 
+	for _, secret := range opsecret.Status.Secrets {
+		if !o.shouldBeDeleted(opsecret, &secret) {
+			continue
+		}
+		existingSecret := &corev1.Secret{}
+		if err = k8sClient.Get(ctx, types.NamespacedName{Name: k8sSecret.Name, Namespace: secret.Namespace}, existingSecret); err != nil {
+			theLog.Error("error getting secret for deletion", "error", err.Error(),
+				"secret", fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
+			continue
+		}
+
+		if err = k8sClient.Delete(ctx, existingSecret); err != nil {
+			theLog.Error("error deleting secret", "error", err.Error(),
+				"secret", fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
+			continue
+		}
+		theLog.Info(fmt.Sprintf("deleted secret : %s/%s", existingSecret.Namespace, existingSecret.Name), "cause", "deleted from opsecret spec")
+		o.updateOpsecretPostDeletion(opsecret, &secret)
+	}
+
 	if opsecret.Status.Events == nil {
 		opsecret.Status.Events = []crds.Event{}
 	}
 
-	opsecret.Status.LastUpdated = metav1.NewTime(time.Now())
+	opsecret.Status.LastReconciled = metav1.NewTime(time.Now())
 	err = k8sClient.Status().Update(ctx, opsecret)
 	if err != nil {
-		theLog.Error("failed to update the last updated time for opsecret", "error", err.Error())
+		theLog.Error("failed to update the last reconciled time for opsecret", "error", err.Error())
 		return ctrl.Result{}, err
 	}
 
 	return o.getRequeue(opsecret), nil
+}
+
+func (o operator) updateOpsecretPostDeletion(opsecret *crds.OpSecret, secret *crds.Secret) {
+	newSecrets := make([]crds.Secret, 0)
+	for _, theSecret := range opsecret.Status.Secrets {
+		if theSecret.Name == secret.Name && theSecret.Namespace == secret.Namespace {
+			continue
+		}
+		newSecrets = append(newSecrets, theSecret)
+	}
+	opsecret.Status.Secrets = newSecrets
+}
+
+func (o operator) shouldBeDeleted(opsecret *crds.OpSecret, secret *crds.Secret) bool {
+	if secret.Name != opsecret.Spec.Secret.Name {
+		return true
+	}
+	for _, ns := range opsecret.Spec.Secret.Namespaces {
+		if ns == secret.Namespace {
+			return false
+		}
+	}
+	return true
+}
+
+func (o operator) addSecretToStatus(opsecret *crds.OpSecret, secret *corev1.Secret) {
+	if len(opsecret.Status.Secrets) < 1 {
+		opsecret.Status.Secrets = make([]crds.Secret, 0)
+	}
+	for _, childSecret := range opsecret.Status.Secrets {
+		if childSecret.Namespace == secret.Namespace && childSecret.Name == secret.Name {
+			return
+		}
+	}
+	opsecret.Status.Secrets = append(opsecret.Status.Secrets, crds.Secret{
+		Name:      secret.Name,
+		Namespace: secret.Namespace,
+	})
 }
 
 func (o operator) deleteDependentPods(ctx context.Context, opsecret *crds.OpSecret, k8sClient client.Client) ([]string, error) {
@@ -256,20 +318,34 @@ func (o operator) deleteDependentPods(ctx context.Context, opsecret *crds.OpSecr
 }
 
 func (o operator) updateRequired(opsecret *crds.OpSecret, section onepassword.Section) bool {
-	if opsecret.Status.LastUpdated.Time.After(section.LastUpdated) {
-		return false
+	foundSecrets := 0
+	for _, namespace := range opsecret.Spec.Secret.Namespaces {
+		for _, secret := range opsecret.Status.Secrets {
+			if secret.Name == opsecret.Spec.Secret.Name && secret.Namespace == namespace {
+				foundSecrets++
+			}
+		}
+	}
+	if foundSecrets < len(opsecret.Spec.Secret.Namespaces) {
+		return true
 	}
 
-	if opsecret.Spec.Secret.SecretType == "docker" {
+	if opsecret.Status.LastReconciled.Time.Before(section.LastUpdated) || opsecret.Status.LastReconciled.Time.Before(opsecret.Spec.LastUpdated.Time) {
 		return true
 	}
 
 	for _, keyMapping := range opsecret.Spec.Secret.Keys {
-		if opsecret.Status.LastUpdated.Time.After(section.Values[keyMapping.From].LastUpdated) {
-			return false
+		if opsecret.Status.LastReconciled.Time.Before(section.Values[keyMapping.From].LastUpdated) {
+			return true
 		}
 	}
-	return true
+
+	for _, secret := range opsecret.Status.Secrets {
+		if o.shouldBeDeleted(opsecret, &secret) {
+			return true
+		}
+	}
+	return false
 }
 
 func (o operator) getRequeue(opsecret *crds.OpSecret) ctrl.Result {
@@ -325,6 +401,11 @@ func (o operator) getDockerSecret(opsecret *crds.OpSecret, section onepassword.S
 }
 
 func isPodUsingSecret(pod *corev1.Pod, secretName string) bool {
+	bits := strings.Split(pod.Name, "-")
+	if len(bits) > 2 && bits[0] == "operator" && bits[1] == "opsecrets" {
+		return false
+	}
+
 	for _, pullSecret := range pod.Spec.ImagePullSecrets {
 		if pullSecret.Name == secretName {
 			return true
