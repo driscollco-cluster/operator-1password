@@ -19,3 +19,6 @@ docker:
 .PHONY: deploy
 deploy:
 	@helm upgrade --history-max 1 --install $(serviceName) helm --namespace $(namespace) --create-namespace
+
+.PHONY: local
+local: build docker deploy

@@ -4,7 +4,9 @@
 
 package crds
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -24,10 +26,16 @@ type OpSecret struct {
 
 // OpSecretStatus defines the state of a secret as it is created
 type OpSecretStatus struct {
-	Phase       string             `json:"phase,omitempty"`
-	Conditions  []metav1.Condition `json:"conditions,omitempty"`
-	Events      []Event            `json:"events,omitempty"`
-	LastUpdated metav1.Time        `json:"last-updated"`
+	Phase          string             `json:"phase,omitempty"`
+	Conditions     []metav1.Condition `json:"conditions,omitempty"`
+	Events         []Event            `json:"events,omitempty"`
+	LastReconciled metav1.Time        `json:"last-reconciled"`
+	Secrets        []Secret           `json:"secrets,omitempty"`
+}
+
+type Secret struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
 }
 
 type Event struct {
@@ -43,8 +51,9 @@ type Event struct {
 
 // OpSecretSpec contains instructions on how to source and create a secret
 type OpSecretSpec struct {
-	Source SourceConfig `json:"source"`
-	Secret SecretConfig `json:"secret"`
+	LastUpdated metav1.Time  `json:"last-updated"`
+	Source      SourceConfig `json:"source"`
+	Secret      SecretConfig `json:"secret"`
 }
 
 // SourceConfig defines the location within 1Password where the information can be found
